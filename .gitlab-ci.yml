@@ -1,0 +1,92 @@
+image: $CI_REGISTRY_IMAGE:linux
+
+workflow:
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_PIPELINE_SOURCE == "web"
+    - if: $CI_PIPELINE_SOURCE == "push"
+      when: never
+
+build-linux:
+  stage: build
+  script:
+    - cmake -S. -Bbuild_linux -DEXECUTABLES_OUTPUT_DIR=bin_linux -DCMAKE_BUILD_TYPE=Release
+    - cmake --build build_linux
+  artifacts:
+    paths:
+      - bin_linux/
+      - build_linux/
+    expire_in: 1 week
+
+build-windows:
+  stage: build
+  image: $CI_REGISTRY_IMAGE:windows
+  script:
+    - cmake -S. -Bbuild_windows -DEXECUTABLES_OUTPUT_DIR=bin_windows -DCMAKE_BUILD_TYPE=Release
+    - cmake --build build_windows
+  artifacts:
+    paths:
+      - bin_windows/
+      - build_windows/
+    expire_in: 1 week
+
+test-nemoh1:
+  stage: test
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH
+      when: manual
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  script:
+    - cd build_linux
+    - ctest -V -j 20 -L NEMOH1
+  needs: ["build-linux"]
+
+test-nemoh2:
+  stage: test
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH
+      when: manual
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  script:
+    - cd build_linux
+    - ctest -V -j 20 -L NEMOH2
+  needs: ["build-linux"]
+
+release:
+  stage: deploy
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v\d+.\d+.\d+$/
+      when: manual
+  variables:
+    NEMOH_LINUX_URL: "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/nemoh/${CI_COMMIT_TAG}/nemoh-linux-x64-${CI_COMMIT_TAG}.tar.gz"
+    NEMOH_WINDOWS_URL: "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/nemoh/${CI_COMMIT_TAG}/nemoh-windows-x64-${CI_COMMIT_TAG}.zip"
+  script:
+    - tar -czf nemoh-linux.tar.gz -C bin_linux .
+    - 'curl --header "JOB-TOKEN: $CI_JOB_TOKEN" --upload-file nemoh-linux.tar.gz $NEMOH_LINUX_URL'
+    - zip -D nemoh-windows.zip bin_windows/*
+    - 'curl --header "JOB-TOKEN: $CI_JOB_TOKEN" --upload-file nemoh-windows.zip $NEMOH_WINDOWS_URL'
+  release:
+    tag_name: '$CI_COMMIT_TAG'
+    description: '$CI_COMMIT_TAG'
+    assets:
+      links:
+        - name: linux-x64
+          url: $NEMOH_LINUX_URL
+          link_type: package
+        - name: windows-x64
+          url: $NEMOH_WINDOWS_URL
+          link_type: package
+
+pages:
+  stage: deploy
+  script:
+    - cd doc
+    - make html | tee sphinx.log
+  artifacts:
+    paths:
+      - doc/_build/html
+      - doc/sphinx.log
+  publish: doc/_build/html
+  rules:
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
