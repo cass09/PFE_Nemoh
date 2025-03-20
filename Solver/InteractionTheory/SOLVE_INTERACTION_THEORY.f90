@@ -50,13 +50,14 @@ CONTAINS
 
   ! Question : boucle sur les fréquences ici ou avant appel fonction ?
   ! Question : création d'un autre exécutable ou pas nécessaire ?
+  ! Nouvelles données input (nombre et positions des WEC; waves direction of the entire system
+  ! and discrétisation dtheta et dz ? ) -> ajout dans Nemoh.cal ou création autre fichier spécifique ?
 
   ! PLAN : 
-  ! 1 - recupérer Madd, Crad et Fex pour un solide isolé :
-      ! avec fonction commune ReadTresults ou autre ? 
-      ! solve BEM recup que Potential différencié entre scattering et radiation !!
-      ! Question : mesh = 1 solide -> prise en compte organisation de la ferme ?
-      !          ou tous les solides sont configurés dans quel cas appel solve BEM que pour un !
+  ! 1 - recupérer Madd, Crad, Fex et potentiels pour un solide isolé :
+      ! solve BEM recup que Potential scattering et radiation
+      ! donc coeffs recup dans fichiers output ou avec fonction commune ReadTresults ou autre ? 
+      ! mesh = 1 solide -> solve BEM que sur un puis interaction theory sur l'ensemble !
   ! 2 - calcul D, G et radiation coefs (fonction tranfert dans code python)
           ! - calcul a_s_scat à partir du flux phi_scat 
           ! - calcul a_s_rad à partir du flux phi_rad
@@ -67,13 +68,16 @@ CONTAINS
           ! Besoin solveur LU, GMRES 
           ! - troncature et réduction ???
   ! 3 - calcul Madd, Crad, Fex pour l'ensemble du système (inspiration code python)
+          ! Attention : transposée ou pas ??
+          ! recup params sur la ferme
           ! - calcul matrice transformation T
           ! - troncature ???
           ! Besoin des fonctions de Bessel
           ! - calculer Fex à partir scatting (theory OK)
-          ! - calculer Madd, Crad en passant par FR à partir radiation (theory to check)
+          ! - calculer Madd, Crad en passant par FR à partir radiation (theory OK)
 
-  ! Attention code python adpatée à la géométrie du cylindre -> ajustement à faire ? utiliser index panel et non coord cylindriques ?
+  ! Attention code python adpatée à la géométrie du cylindre 
+  ! -> ajustement à faire ? utiliser index panel et non coord cylindriques ?
 
   IF (omega /= omega_previous) THEN
       ! Do not recompute if the same frequency is studied twice
@@ -82,6 +86,6 @@ CONTAINS
   END IF 
 
   RETURN
-  END SUBROUTINE
+  END SUBROUTINE SOLVE_POTENTIAL_MATRIX
 
 END MODULE

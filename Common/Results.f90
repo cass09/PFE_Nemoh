@@ -203,6 +203,7 @@
             END DO
         END DO
         CLOSE(10)
+        
         OPEN(10,FILE=namedir//'/DiffractionForce.tec')
         WRITE(10,'(A)') FreqVar_text
         DO k=1,Results%Nintegration
@@ -215,6 +216,7 @@
             END DO
         END DO
         CLOSE(10)
+
         OPEN(10,FILE=namedir//'/ExcitationForce.tec')
         WRITE(10,'(A)') FreqVar_text
         DO k=1,Results%Nintegration
@@ -228,26 +230,30 @@
             END DO
         END DO
         CLOSE(10)
+
 !       Added by Christophe Peyrard
 !       Save hydrodynamic database with Aquaplus format
         OPEN(10,FILE=namedir//'/CA.dat')
-        WRITE(10,'(A,I5)') 'Nb de frequency : ',Results%Nw
+        WRITE(10,'(A,I5)') 'Nb de frequency : ',Results%Nw, 'Nb dof :', Results%Nradiation, 'Nb forces : ', Results%Nintegration
         DO l=1,Results%Nw
           WRITE(10,'(F7.4)') Results%w(l)
           DO j=1,Results%Nradiation
-              WRITE(10,'(6(X,E13.6))') (Results%RadiationDamping(l,j,k),k=1,Results%Nintegration)
+            ! CML format modifié de 6 à 12 pour avoir 12 colonnes =Nint
+              WRITE(10,'(12(X,E13.6))') (Results%RadiationDamping(l,j,k),k=1,Results%Nintegration)
           END DO
         END DO
         CLOSE(10)
+
         OPEN(10,FILE=namedir//'/CM.dat')
         WRITE(10,'(A,I5)') 'Nb de frequency : ',Results%Nw
         DO l=1,Results%Nw
           WRITE(10,'(F7.4)') Results%w(l)
           DO j=1,Results%Nradiation
-              WRITE(10,'(6(X,E13.6))') (Results%AddedMass(l,j,k),k=1,Results%Nintegration)
+              WRITE(10,'(12(X,E13.6))') (Results%AddedMass(l,j,k),k=1,Results%Nintegration)
           END DO
         END DO
         CLOSE(10)
+
         OPEN(10,FILE=namedir//'/Fe.dat')
         WRITE(10,'(A)') 'VARIABLES="Frequency (rad/s)" "|Fx| (N/m)" "|Fy| (N/m)" "|Fz| (N/m)" "|Cx| (N)" "|Cy| (N)" "|Cz| (N)" "ang(Fx) (°)" "ang(Fy) (°)" "ang(Fz) (°)" "ang(Cx) (°)" "ang(Cy) (°)" "ang(Cz) (°)"'
         WRITE(10,'(A,I2,A)') 'Zone t="Corps ',1,'"'
@@ -266,6 +272,7 @@
             END DO
         END DO
         CLOSE(10)
+
 !       End of addition
         END SUBROUTINE SaveTResults
 !       ---
