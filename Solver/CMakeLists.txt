@@ -10,6 +10,7 @@ set(SOLVER_SRC
     ${CORE_SRC_DIR}/INITIALIZE_GREEN.f90
     ${CORE_SRC_DIR}/GREEN_2.f90
     ${CORE_SRC_DIR}/SOLVE_BEM_DIRECT.f90
+    ${InteractionTheory_SRC_DIR}/SOLVE_INTERACTION_THEORY.f90
     ${CORE_SRC_DIR}/KOCHIN.f90
     ${CORE_SRC_DIR}/FREESURFACE.f90
     ${CORE_SRC_DIR}/FORCES.f90
@@ -21,7 +22,7 @@ set(SOLVER_SRC
     ${COMMON_SRC_DIR}/Mesh.f90
     ${COMMON_SRC_DIR}/Face.f90
     NEMOH.f90)
-
+# CML modifs : ajout InteractionTheory
 add_executable(solver ${SOLVER_SRC})
 
 target_link_libraries(solver ${LAPACK_LIBRARIES})

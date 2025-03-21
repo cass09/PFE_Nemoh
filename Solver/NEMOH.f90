@@ -43,6 +43,7 @@ PROGRAM Main
 
   ! Resolution
   USE SOLVE_BEM_DIRECT,     ONLY: SOLVE_POTENTIAL_DIRECT
+  USE SOLVE_INTERACTION_THEORY,     ONLY: SOLVE_POTENTIAL_MATRIX
   ! Post processing and output
   USE OUTPUT,               ONLY: WRITE_DATA_ON_MESH,WRITE_SOURCES
   USE FORCES,               ONLY: COMPUTE_AND_WRITE_FORCES
@@ -67,6 +68,8 @@ PROGRAM Main
   TYPE(TGREEN)                       :: IGreen             ! Initial Green variables
   REAL                               :: tcpu_start
   CHARACTER(LEN=1000)                :: LogTextToBeWritten
+  COMPLEX, DIMENSION(:,:), ALLOCATABLE :: Np_Potential          ! Computed potential
+  LOGICAL :: check_IT
 
   ! Initialization ---------------------------------------------------------------------
 
@@ -83,6 +86,7 @@ PROGRAM Main
   CALL ReadTMesh(Mesh, TRIM(wd)//'/mesh/')
   ALLOCATE(ZIGB(Mesh%NPanels), ZIGS(Mesh%NPanels))
   ALLOCATE(Potential(Mesh%NPanels*2**Mesh%Isym))
+  ALLOCATE(Np_Potential(BodyConditions%Nproblems, Mesh%NPanels*2**Mesh%Isym))
 
   CALL ReadTBodyConditions            &
   ( BodyConditions,                   &
@@ -119,7 +123,7 @@ PROGRAM Main
 
   DO i_problem = 1, BodyConditions%Nproblems
     WRITE(*,'(A,I5,A,I5,A,A,$)') ' Problem ',i_problem,' / ',BodyConditions%Nproblems,' ',CHAR(13)
-
+    ! Write(*,*) "problème : ", i_problem, " type : ", BodyConditions%Switch_Type(i_problem)
     omega = BodyConditions%omega(i_problem) ! Wave frequency
     ! Compute wave number k
     IF ((Env%depth == INFINITE_DEPTH) .OR. (omega**2*Env%depth/Env%g >= 20)) THEN
@@ -137,11 +141,11 @@ PROGRAM Main
         BodyConditions%NormalVelocity(1:Mesh%Npanels*2**Mesh%Isym, i_problem), &
         S,V,Vinv,ZIGB, ZIGS,                                                   &
         Potential(:),SolverOpt,trim(wd))
-
+    ! WRITE(*,*) Potential(1:10)
     !===========================
     ! Post processing and output
     !===========================
-
+    Np_Potential(i_problem, :) = Potential(:)
     CALL COMPUTE_AND_WRITE_FORCES            &
     !============================
     ( TRIM(wd)//'/mesh/Integration.dat',     &
@@ -183,11 +187,16 @@ PROGRAM Main
     END IF
 
   END DO
+  check_IT = .true.
+  IF (check_IT) THEN
+    CALL SOLVE_POTENTIAL_MATRIX(VFace, Mesh, Env,SolverOpt, BodyConditions%Nproblems, Np_Potential, BodyConditions%Switch_type, wd)
+  END IF
+
   CALL END_RECORD_TIME(tcpu_start,trim(wd)//'/logfile.txt')
   WRITE(*,*) '. Done !'
   ! Finalize ---------------------------------------------------------------------------
 
-  DEALLOCATE(ZIGB, ZIGS, Potential,S,V,Vinv)
+  DEALLOCATE(ZIGB, ZIGS, Potential,S,V,Vinv, Np_Potential)
   DEALLOCATE(IGreen%FSP1,IGreen%FSM1,IGreen%VSP1,IGREEN%VSM1)
   DEALLOCATE(IGreen%FSP1_INF,IGreen%FSM1_INF,IGreen%VSP1_INF,IGREEN%VSM1_INF)
   DEALLOCATE(IGreen%XR,IGreen%XZ)
