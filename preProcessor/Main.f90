@@ -75,6 +75,11 @@
 !   Other local variables
     INTEGER :: M
     INTEGER :: i,j,c,k,IdBody,IdMode,indsum
+!   CML - MODIF
+!   Interaction Theory - Cylinder envelop
+    INTEGER :: Switch_Cylsurface
+    INTEGER :: cyldTheta, cyldZ
+    REAL :: cylR, cylZ
 !
 !   --- Initialize and read input datas ----------------------------------------------------------------------------------------
 !
@@ -99,6 +104,10 @@
     Lx                =InpNEMOHCAL%OptOUTPUT%Freesurface%Lx
     Ly                =InpNEMOHCAL%OptOUTPUT%Freesurface%Ly
     Switch_SourceDistr=InpNEMOHCAL%OptOUTPUT%Switch_SourceDistr
+    Switch_Cylsurface =InpNEMOHCAL%OptOUTPUT%Cylsurface%Switch
+    cylR              =InpNEMOHCAL%OptOUTPUT%Cylsurface%cylR
+    cyldTheta         =InpNEMOHCAL%OptOUTPUT%Cylsurface%cyldTheta
+    cyldZ             =InpNEMOHCAL%OptOUTPUT%Cylsurface%cyldZ
 ! ---------------------------------------------------------------------------
 !   Print summary of calculation case
     WRITE(*,*) ' '
@@ -194,6 +203,7 @@
     WRITE(11,*) ((Switch_Freesurface,j=1,Nbeta+Nradiation),i=1,Nw)
     WRITE(11,*) ((Switch_Kochin,j=1,Nbeta+Nradiation),i=1,Nw)
     WRITE(11,*) ((Switch_SourceDistr,j=1,Nbeta+Nradiation),i=1,Nw)
+    WRITE(11,*) ((Switch_Cylsurface,j=1,Nbeta+Nradiation),i=1,Nw)
     DO c=1,Mesh%Npanels*2**Mesh%Isym
         WRITE(11,*) (REAL(NormalVelocity(c,j)),IMAG(NormalVelocity(c,j)),j=1,(Nbeta+Nradiation)*Nw)
     END DO
@@ -256,6 +266,28 @@
     END IF
     CLOSE(11)
 !
+! --- Generate Cylindrical control surf mesh file ----------------------------------------------------------------------
+!   CML
+    OPEN(11,FILE=ID%ID(1:ID%lID)//'/mesh/Cylsurface.dat')
+    WRITE(11,*) cyldTheta*cyldZ,cyldTheta*(cyldZ-1) 
+    DO i=1,cyldZ
+        DO j=1,cyldTheta
+            IF (cyldZ .EQ. 1) THEN
+                cylZ = 0
+            ELSE
+                cylZ = -Environment%Depth*(1.-COS(PI/2.*(i-1.)/(cyldZ-1.)))
+            END IF
+            WRITE(11,'(3(X,E14.6))') cylR*COS(2.*PI*(j-1)/cyldTheta),cylR*SIN(2.*PI*(j-1)/cyldTheta),cylZ
+        END DO
+    END DO  
+    DO i=1,cyldZ-1
+        DO j=1,cyldTheta-1
+            WRITE(11,'(4(X,I7))') j+(i-1)*cyldTheta,j+i*cyldTheta,j+i*cyldTheta+1,j+(i-1)*cyldTheta+1
+        END DO
+        WRITE(11,'(4(X,I7))') i*cyldTheta,(i+1)*cyldTheta,i*cyldTheta+1,(i-1)*cyldTheta+1
+    END DO
+    CLOSE(11)
+! 
 !   --- Save index of cases ----------------------------------------------------------------------------------------------
 !
     OPEN(10,FILE=TRIM(ID%ID)//'/results/index.dat')

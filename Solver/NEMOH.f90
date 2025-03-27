@@ -31,7 +31,7 @@
 PROGRAM Main
 
   USE Constants
-  USE MMesh,                ONLY: TMesh,           ReadTMesh
+  USE MMesh,                ONLY: TMesh,           ReadTMesh, DeleteTMesh
   USE MEnvironment,         ONLY: TEnvironment,    ReadTEnvironment
   USE MBodyConditions,      ONLY: TBodyConditions, ReadTBodyConditions
   USE M_Solver,             ONLY: TSolver,         ReadTSolver, ID_GMRES
@@ -48,12 +48,13 @@ PROGRAM Main
   USE OUTPUT,               ONLY: WRITE_DATA_ON_MESH,WRITE_SOURCES
   USE FORCES,               ONLY: COMPUTE_AND_WRITE_FORCES
   USE KOCHIN,               ONLY: COMPUTE_AND_WRITE_KOCHIN
-  USE FREESURFACE,          ONLY: COMPUTE_AND_WRITE_FREE_SURFACE_ELEVATION
+  USE FREESURFACE,          ONLY: COMPUTE_AND_WRITE_FREE_SURFACE_ELEVATION, &
+                            READ_CYLSURFACE_PARAMETERS, COMPUTE_AND_WRITE_CYL_SURFACE
 
   IMPLICIT NONE
 
   CHARACTER(LEN=1000)   :: wd             ! Working directory path (max length: 1000 characters, increase if necessary)
-  TYPE(TMesh)           :: Mesh           ! Mesh of the floating body
+  TYPE(TMesh)           :: Mesh, MeshCyl         ! Mesh of the floating body
   TYPE(TBodyConditions) :: BodyConditions ! Physical conditions on the floating body
   TYPE(TEnvironment)    :: Env            ! Physical conditions of the environment
   TYPE(TSolver)         :: SolverOpt      ! Solver Option, specified by user in input_solver.txt
@@ -68,6 +69,7 @@ PROGRAM Main
   TYPE(TGREEN)                       :: IGreen             ! Initial Green variables
   REAL                               :: tcpu_start
   CHARACTER(LEN=1000)                :: LogTextToBeWritten
+  COMPLEX, DIMENSION(:), ALLOCATABLE :: ETAc 
   COMPLEX, DIMENSION(:,:), ALLOCATABLE :: Np_Potential          ! Computed potential
   LOGICAL :: check_IT
 
@@ -86,13 +88,16 @@ PROGRAM Main
   CALL ReadTMesh(Mesh, TRIM(wd)//'/mesh/')
   ALLOCATE(ZIGB(Mesh%NPanels), ZIGS(Mesh%NPanels))
   ALLOCATE(Potential(Mesh%NPanels*2**Mesh%Isym))
-  ALLOCATE(Np_Potential(BodyConditions%Nproblems, Mesh%NPanels*2**Mesh%Isym))
 
   CALL ReadTBodyConditions            &
   ( BodyConditions,                   &
     Mesh%Npanels*2**Mesh%Isym,        &
     TRIM(wd)//'/Normalvelocities.dat' &
     )
+
+  CALL READ_CYLSURFACE_PARAMETERS(TRIM(wd)//'/mesh/Cylsurface.dat', MeshCyl)
+  ALLOCATE(Np_Potential(BodyConditions%Nproblems, MeshCyl%Npoints))
+  ALLOCATE(ETAc(MeshCyl%Npoints))
 
   CALL ReadTEnvironment(Env, file=TRIM(wd)//'/Nemoh.cal')
 
@@ -123,7 +128,7 @@ PROGRAM Main
 
   DO i_problem = 1, BodyConditions%Nproblems
     WRITE(*,'(A,I5,A,I5,A,A,$)') ' Problem ',i_problem,' / ',BodyConditions%Nproblems,' ',CHAR(13)
-    ! Write(*,*) "problème : ", i_problem, " type : ", BodyConditions%Switch_Type(i_problem)
+    ! Write(*,*) "problème : ", i_problem
     omega = BodyConditions%omega(i_problem) ! Wave frequency
     ! Compute wave number k
     IF ((Env%depth == INFINITE_DEPTH) .OR. (omega**2*Env%depth/Env%g >= 20)) THEN
@@ -145,7 +150,7 @@ PROGRAM Main
     !===========================
     ! Post processing and output
     !===========================
-    Np_Potential(i_problem, :) = Potential(:)
+    ! Np_Potential(i_problem, :) = Potential(:)
     CALL COMPUTE_AND_WRITE_FORCES            &
     !============================
     ( TRIM(wd)//'/mesh/Integration.dat',     &
@@ -186,6 +191,15 @@ PROGRAM Main
        TRIM(wd)//'/results/sources/sources.'//string(i_problem)//'.dat')
     END IF
 
+    IF (BodyConditions%Switch_Cylsurface(i_problem) == 1) THEN
+      CALL COMPUTE_AND_WRITE_CYL_SURFACE                 &
+      !============================================
+      ( IGreen,VFace,             &
+        Mesh, Env, omega, wavenumber, ZIGB, ZIGS,                    &
+        TRIM(wd)//'/results/cylsurface.'//string(i_problem)//'.dat', &
+        MeshCyl, ETAc)
+      Np_Potential(i_problem, :) = ETAc(:)*Env%G/(II*omega)
+    END IF
   END DO
   check_IT = .true.
   IF (check_IT) THEN
@@ -195,8 +209,9 @@ PROGRAM Main
   CALL END_RECORD_TIME(tcpu_start,trim(wd)//'/logfile.txt')
   WRITE(*,*) '. Done !'
   ! Finalize ---------------------------------------------------------------------------
-
-  DEALLOCATE(ZIGB, ZIGS, Potential,S,V,Vinv, Np_Potential)
+  IF (MeshCyl%Npoints.GT.0) CALL DeleteTMesh(MeshCyl)
+  DEALLOCATE(ZIGB, ZIGS, Potential,S,V,Vinv)
+  DEALLOCATE(Np_Potential, ETAc)
   DEALLOCATE(IGreen%FSP1,IGreen%FSM1,IGreen%VSP1,IGREEN%VSM1)
   DEALLOCATE(IGreen%FSP1_INF,IGreen%FSM1_INF,IGreen%VSP1_INF,IGREEN%VSM1_INF)
   DEALLOCATE(IGreen%XR,IGreen%XZ)

@@ -13,7 +13,7 @@
   ! PLAN : 
   ! 1 - recupérer Madd, Crad, Fex et potentiels pour un solide isolé :
       ! solve BEM recup que Potential scattering et radiation
-      ! donc coeffs recup dans fichiers output ou avec fonction commune ReadTresults ou autre ? 
+      ! coeffs recup dans fichiers output ou avec fonction commune ReadTresults ou autre ? 
       ! mesh = 1 solide -> solve BEM que sur un puis interaction theory sur l'ensemble !
   ! 2 - calcul D, G et radiation coefs (fonction tranfert dans code python)
           ! - calcul a_s_scat à partir du flux phi_scat 
@@ -74,11 +74,11 @@ CONTAINS
   (VFace, Mesh, Env,SolverOpt, Nproblems, Potential, Switch_type, wd)
   IMPLICIT NONE
 
-  TYPE(TVFace),                                   INTENT(IN)    :: VFace
-  TYPE(TMesh),                                    INTENT(IN)    :: Mesh
-  TYPE(TEnvironment),                             INTENT(IN)    :: Env
-  TYPE(TSolver),                                  INTENT(IN)    :: SolverOpt
-  COMPLEX, DIMENSION(Nproblems, Mesh%NPanels*2**Mesh%Isym), INTENT(IN)   :: Potential          ! Computed potential
+  TYPE(TVFace),                                   INTENT(IN) :: VFace
+  TYPE(TMesh),                                    INTENT(IN) :: Mesh
+  TYPE(TEnvironment),                             INTENT(IN) :: Env
+  TYPE(TSolver),                                  INTENT(IN) :: SolverOpt
+  COMPLEX, DIMENSION(Nproblems, Mesh%Npoints),    INTENT(IN) :: Potential          ! Computed potential
   INTEGER,                                        INTENT(IN) :: Nproblems
   INTEGER,DIMENSION(Nproblems),                   INTENT(IN) :: Switch_Type
   CHARACTER(LEN=*),                               INTENT(IN) :: wd
@@ -100,7 +100,7 @@ CONTAINS
     WRITE(*,*) "----------------ReadParams Iso OK"
 
     CALL CalculMatrix  &
-    (Env, Mesh%NPanels*2**Mesh%Isym, Potential, Switch_Type, ParamsIT, beta_iso, Fex_iso)
+    (Env, Mesh%Npoints, Potential, Switch_Type, ParamsIT, beta_iso, Fex_iso)
 
     CALL SolveITproblem(ParamsIT, Madd_iso, Crad_iso)
 
@@ -142,6 +142,11 @@ CONTAINS
 
   OPEN(15,FILE=TRIM(wd)//'/input_IT.dat')
     READ(15,*) InputIT%run_IT
+    ! IF (ParamsIT%run_IT==0) THEN
+    !   WRITE(*,*) "--------- Interaction Theory not activated ------------"
+    !   CLOSE(15)
+    !   RETURN
+    ! END IF
     READ(15,*) InputIT%Nb
     ALLOCATE(InputIT%Coord(InputIT%Nb, 2))
     DO k=1,InputIT%Nb
@@ -340,7 +345,14 @@ CONTAINS
   CALL OneToTwoPotential(Nmesh, Potential, Switch_type, PHI_S, PHI_R)
   WRITE(*,*) "-------- Potential OK"
 
-
+    ! - calcul a_s_scat à partir du flux phi_scat 
+    ! - calcul a_s_rad à partir du flux phi_rad
+    ! Besoin des fonctions de Bessel
+    ! - calcul a_i
+    ! - Resolution a_i * D = a_s_scat 
+    ! - Resolution a_i * G = fex
+    ! Besoin solveur LU, GMRES 
+    ! - troncature et réduction ???
 
 
   DEALLOCATE(PHI_R, PHI_S)

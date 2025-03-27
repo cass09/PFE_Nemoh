@@ -26,7 +26,7 @@ MODULE FREESURFACE
   ! Computation of the free surface elevation from the computed source distribution.
 
   USE Constants
-  USE MMesh,                     ONLY: TMesh, CreateTMesh
+  USE MMesh,                     ONLY: TMesh, CreateTMesh, DeleteTMesh
   USE MEnvironment,              ONLY: TEnvironment
   USE MFace,                     ONLY: TVFace
   ! Green functions
@@ -37,12 +37,16 @@ MODULE FREESURFACE
   USE OUTPUT
 
   IMPLICIT NONE
+  ! CML - MODIFS for the Interaction Theory : 
+  ! - reading of the cylindrical mesh
+  ! - computation of the potential on this mesh
 
-  PUBLIC  :: COMPUTE_AND_WRITE_FREE_SURFACE_ELEVATION
+  PUBLIC  :: COMPUTE_AND_WRITE_FREE_SURFACE_ELEVATION, COMPUTE_AND_WRITE_CYL_SURFACE, &
+  READ_CYLSURFACE_PARAMETERS
   PRIVATE :: READ_FREESURFACE_PARAMETERS, COMPUTE_POTENTIAL_AT_POINT, WRITE_FS
 
-  PRIVATE
-  TYPE(TMesh) :: MeshFS ! Mesh of the free surface
+  ! PRIVATE
+  ! TYPE(TMesh) :: MeshFS ! Mesh of the free surface
 
 CONTAINS
 
@@ -67,8 +71,9 @@ CONTAINS
     INTEGER :: j
     COMPLEX :: PHI
     COMPLEX, DIMENSION(:), ALLOCATABLE :: ETA
+    TYPE(TMesh) :: MeshFS
 
-    CALL READ_FREESURFACE_PARAMETERS(parameters_file)
+    CALL READ_FREESURFACE_PARAMETERS(parameters_file, MeshFS)
 
     ALLOCATE(ETA(MeshFS%NPoints))
 
@@ -85,20 +90,65 @@ CONTAINS
       ETA(j) = II*omega/Env%G*PHI
     END DO
 
-    CALL WRITE_FS(output_file, ETA)
+    CALL WRITE_FS(output_file, ETA, MeshFS)
+
+    IF (MeshFS%Npoints.GT.0) CALL DeleteTMesh(MeshFS)
+
 
     DEALLOCATE(ETA)
 
   END SUBROUTINE COMPUTE_AND_WRITE_FREE_SURFACE_ELEVATION
 
   !-------------------------------------------
-  !-------------------------------------------
+  SUBROUTINE COMPUTE_AND_WRITE_CYL_SURFACE  &
+    ! Main subroutine of the module. Called in NEMOH.f90.
+    ( IGreen, VFace,                 &
+      Mesh, Env, omega, wavenumber, ZIGB, ZIGS,        &
+      output_file, MeshCyl, ETA               &
+      )
+
+    CHARACTER(LEN=*),                 INTENT(IN) :: output_file
+    TYPE(TMesh),                      INTENT(IN) :: Mesh, MeshCyl
+    TYPE(TVFace),                     INTENT(IN) :: VFace
+    TYPE(TEnvironment),               INTENT(IN) :: Env
+    REAL,                             INTENT(IN) :: omega, wavenumber
+    COMPLEX, DIMENSION(Mesh%NPanels), INTENT(IN) :: ZIGB, ZIGS ! Sources
+    TYPE(TGREEN),                     INTENT(IN) :: IGreen
+    COMPLEX, DIMENSION(MeshCyl%Npoints),  INTENT(OUT) :: ETA
+
+    ! Local variables
+    INTEGER :: j
+    COMPLEX :: PHI
+    
+
+    DO j = 1, MeshCyl%Npoints
+
+      CALL COMPUTE_POTENTIAL_AT_POINT             &
+      !==============================
+      ( Mesh, Env, omega, wavenumber, ZIGB, ZIGS, &
+        MeshCyl%X(1, j), MeshCyl%X(2, j), MeshCyl%X(3, j),      &
+        PHI, IGreen,VFace                         &
+        )
+      ! Mesh OR MeshCyl ???????!
+
+      ! Get elevation ETA from potential PHI
+      ETA(j) = II*omega/Env%G*PHI
+    END DO
+
+    CALL WRITE_FS(output_file, ETA, MeshCyl)
+
+    
+
+    ! DEALLOCATE(ETA)
+
+  END SUBROUTINE COMPUTE_AND_WRITE_CYL_SURFACE
   !-------------------------------------------
 
-  SUBROUTINE READ_FREESURFACE_PARAMETERS(filename)
+  SUBROUTINE READ_FREESURFACE_PARAMETERS(filename, MeshFS)
     ! Load mesh of the free surface
 
     CHARACTER(LEN=*), INTENT(IN) :: filename
+    TYPE(TMesh), INTENT(INOUT)   :: MeshFS
 
     INTEGER :: j, u
 
@@ -124,7 +174,34 @@ CONTAINS
   END SUBROUTINE READ_FREESURFACE_PARAMETERS
 
   !-------------------------------------------
-  !-------------------------------------------
+  SUBROUTINE READ_CYLSURFACE_PARAMETERS(filename, MeshCyl)
+    ! Load mesh of the cylindrical surface
+
+    CHARACTER(LEN=*), INTENT(IN) :: filename
+    TYPE(TMesh), INTENT(INOUT)   :: MeshCyl
+
+    INTEGER :: j, u
+
+    IF (.NOT. ALLOCATED(MeshCyl%X)) THEN
+      OPEN(NEWUNIT=u, FILE=filename, STATUS='OLD', ACTION='READ')
+      READ(u, *) MeshCyl%Npoints, MeshCyl%Npanels
+      IF (MeshCyl%Npoints > 0) THEN
+        CALL CreateTMesh(MeshCyl, MeshCyl%Npoints, MeshCyl%Npanels, 1)
+        DO j = 1, MeshCyl%Npoints
+          READ(u, *) MeshCyl%X(1,j), MeshCyl%X(2,j), MeshCyl%X(3,j)
+        END DO
+        DO j = 1, MeshCyl%Npanels
+          READ(u, *) MeshCyl%P(1,j), MeshCyl%P(2,j), MeshCyl%P(3,j), MeshCyl%P(4,j)
+        END DO
+      END IF
+      CLOSE(u)
+    ELSE
+      ! A file has already been loaded.
+      ! We assume only one file should be used for each run of the program.
+      ! Thus nothing happens.
+    END IF
+
+  END SUBROUTINE READ_CYLSURFACE_PARAMETERS
   !-------------------------------------------
 
   SUBROUTINE COMPUTE_POTENTIAL_AT_POINT         &
@@ -184,29 +261,29 @@ CONTAINS
   !-------------------------------------------
   !-------------------------------------------
 
-  SUBROUTINE WRITE_FS(filename, ETA)
+  SUBROUTINE WRITE_FS(filename, ETA, Mesh)
     ! Write the field ETA into a text file.
 
     CHARACTER(LEN=*),      INTENT(IN) :: filename
     COMPLEX, DIMENSION(*), INTENT(IN) :: ETA
-
+    TYPE(TMesh),           INTENT(IN) :: Mesh
     ! Local variables
     INTEGER          :: i, u
 
     OPEN(NEWUNIT=u, FILE=filename, ACTION='WRITE')
 
     IF (output_format == TECPLOT_OUTPUT) THEN
-      WRITE(u, *) 'VARIABLES="X" "Y" "abs(eta) (m)" "angle(phi) (rad)" "PRE1" "PRE2"'
-      WRITE(u, '(A,I7,A,I7,A)') 'ZONE N=', MeshFS%Npoints, ' , E = ', MeshFS%Npanels, ' , F=FEPOINT,ET=QUADRILATERAL'
+      WRITE(u, *) 'VARIABLES="X" "Y" "Z" "abs(eta) (m)" "angle(phi) (rad)" "PRE1" "PRE2"'
+      WRITE(u, '(A,I7,A,I7,A)') 'ZONE N=', Mesh%Npoints, ' , E = ', Mesh%Npanels, ' , F=FEPOINT,ET=QUADRILATERAL'
     END IF
 
-    DO i = 1, MeshFS%Npoints
-      WRITE(u, '(6(X, E14.7))') MeshFS%X(1, i), MeshFS%X(2, i), ABS(eta(i)), ATAN2(IMAG(eta(i)), REAL(eta(I))), REAL(eta(i)), IMAG(eta(i))
+    DO i = 1, Mesh%Npoints
+      WRITE(u, '(6(X, E14.7))') Mesh%X(1, i), Mesh%X(2, i), Mesh%X(3, i), ABS(eta(i)), ATAN2(IMAG(eta(i)), REAL(eta(I))), REAL(eta(i)), IMAG(eta(i))
     END DO
 
     IF (output_format == TECPLOT_OUTPUT) THEN
-      DO i=1,MeshFS%Npanels
-        WRITE(u, *) MeshFS%P(1, i), MeshFS%P(2, i), MeshFS%P(3, i), MeshFS%P(4, i)
+      DO i=1,Mesh%Npanels
+        WRITE(u, *) Mesh%P(1, i), Mesh%P(2, i), Mesh%P(3, i), Mesh%P(4, i)
       END DO
     END IF
 

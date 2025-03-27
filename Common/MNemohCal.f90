@@ -55,6 +55,12 @@
               REAL        :: Lx,LY      !Length of domain
           END TYPE TFreesurface
 
+          TYPE TCylsurface              ! CML - Envelop for the interaction theory
+              INTEGER     :: Switch
+              INTEGER     :: cyldTheta, cyldZ      ! discretization
+              REAL        :: cylR     !Radius cylinder
+          END TYPE TCylsurface
+
           TYPE TOptOutput
               INTEGER            :: Switch_POTENTIAL
               INTEGER            :: Switch_SourceDistr
@@ -63,6 +69,7 @@
               TYPE(TIRF)         :: IRF
               TYPE(TKochin)      :: Kochin
               TYPE(TFreesurface) :: Freesurface
+              TYPE(TCylsurface) :: Cylsurface
           END TYPE TOptOutput
 
           TYPE TBCase
@@ -191,6 +198,15 @@
 
              READ(ufile,*) InpNEMOHCAL%OptOUTPUT%Switch_RAO
              READ(ufile,*) InpNEMOHCAL%OptOUTPUT%FreqType
+
+             READ(ufile,*) InpNEMOHCAL%OptOUTPUT%Cylsurface%cylR,       &
+                           InpNEMOHCAL%OptOUTPUT%Cylsurface%cyldTheta,       &
+                           InpNEMOHCAL%OptOUTPUT%Cylsurface%cyldZ
+             IF (InpNEMOHCAL%OptOUTPUT%Cylsurface%cylR.GT.0 ) THEN
+                           InpNEMOHCAL%OptOUTPUT%Cylsurface%Switch=1
+             ELSE
+                           InpNEMOHCAL%OptOUTPUT%Cylsurface%Switch=0
+             ENDIF
 
              READ(ufile,*)! ---QTF----
              READ(ufile,*)InpNEMOHCAL%OptOUTPUT%Switch_SourceDistr
