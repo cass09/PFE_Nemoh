@@ -12,7 +12,7 @@
 
   ! PLAN : 
   ! 1 - recupérer Madd, Crad, Fex et potentiels pour un solide isolé :
-      ! solve BEM recup que Potential scattering et radiation
+      ! solve BEM recup que Potential scattering et radiation sur cylindrical mesh
       ! coeffs recup dans fichiers output ou avec fonction commune ReadTresults ou autre ? 
       ! mesh = 1 solide -> solve BEM que sur un puis interaction theory sur l'ensemble !
   ! 2 - calcul D, G et radiation coefs (fonction tranfert dans code python)
@@ -33,9 +33,6 @@
           ! - calculer Fex à partir scatting (theory OK)
           ! - calculer Madd, Crad en passant par FR à partir radiation (theory OK)
 
-  ! Attention code python adpatée à la géométrie du cylindre 
-  ! -> ajustement à faire ? utiliser index panel et non coord cylindriques ?
-
 
 !
 !--------------------------------------------------------------------------------------
@@ -45,7 +42,7 @@ MODULE SOLVE_INTERACTION_THEORY
   USE MMesh,              ONLY: TMesh
   USE MFace,              ONLY: TVFace
   USE MEnvironment,       ONLY: TEnvironment
-  USE M_SOLVER,           ONLY:GAUSSZ,LU_INVERS_MATRIX,GMRES_SOLVER, &
+  USE M_SOLVER,           ONLY:GAUSSZ,LU_INVERS_MATRIX,GMRES_SOLVER, LU_SOLVER, &
                                ID_GAUSS,ID_GMRES,TSolver
   USE MBESSEL,            ONLY:fun_BESSJ
   USE Elementary_functions, ONLY: X0
@@ -65,15 +62,15 @@ MODULE SOLVE_INTERACTION_THEORY
     REAL,DIMENSION(:),        ALLOCATABLE :: wave_dir
     REAL,DIMENSION(:,:,:),    ALLOCATABLE :: Madd, Crad
     COMPLEX,DIMENSION(:,:,:), ALLOCATABLE :: Fex
-    REAL,DIMENSION(:,:,:),    ALLOCATABLE :: D, G
+    COMPLEX,DIMENSION(:,:,:), ALLOCATABLE :: D, G
     TYPE(Tcylsurface)   :: Mcyl
   END TYPE TInteractionTheory
 
   PRIVATE :: ReadTInteractionTheory, CloseIT, &
-   ReadIndex, ReadParamIso, OneToTwoPotential, ReadTwoPotential, CalculParamIso, &
-   CalculMatrix, SolveITproblem
+   ReadIndex, ReadParamIso, ReadTwoPotential, CalculMatrix, SolveITproblem, &
+  OneToTwoPotential, CalculParamIso
   ! Those variables will be conserved between calls of the subroutine.
-  INTEGER :: Nw, Nbeta_iso, Nrad, Nint, Ndir
+  INTEGER :: Nw, Nbeta_iso, Nrad, Nint, Ndir, Mtronc
   REAL, DIMENSION(:), ALLOCATABLE              :: omega
 
 CONTAINS
@@ -103,6 +100,8 @@ CONTAINS
   ALLOCATE(Fex_iso(Nw, Nbeta_iso, Nint), Madd_iso(Nw, Nrad, Nint), Crad_iso(Nw, Nrad, Nint))
   CALL ReadParamIso(Fex_iso, Madd_iso, Crad_iso, wd)
   WRITE(*,*) "-----------------Params ok"
+  
+  ALLOCATE(ParamsIT%D(Nw, 2*Mtronc+1, 2*Mtronc+1), ParamsIT%G(Nw, 2*Mtronc+1, Nint))
 
   CALL CalculMatrix  &
   (Env, SolverOpt, ParamsIT, beta_iso, Fex_iso, wd)
@@ -180,8 +179,6 @@ CONTAINS
   DO j=1,Ndir
     InputIT%wave_dir(j)=(dir_min+(dir_max-dir_min)*(j-1)/(Ndir-1))*PI/180.
   END DO
-  ! WRITE(*,*) "----------------Read Params IT OK"
-
   END SUBROUTINE ReadTInteractionTheory
 
 
@@ -208,7 +205,7 @@ CONTAINS
     READ(17,*) (beta_iso(k),k=1,Nbeta_iso)
     READ(17,*) (omega(k),k=1,Nw)
   CLOSE(17)
-  ! WRITE(*,*) "----------------ReadParams Iso OK"
+  Mtronc = INT(Nbeta_iso-1)/2
 
   END SUBROUTINE ReadIndex
 
@@ -279,7 +276,6 @@ CONTAINS
   END DO
   CLOSE(19)
   DEALLOCATE(line)
-  ! WRITE(*,*) "-----------------Param iso ok"
   END SUBROUTINE ReadParamIso
 
   SUBROUTINE OneToTwoPotential             &
@@ -320,7 +316,6 @@ CONTAINS
         indice_R=indice_R+1 
       END DO
   END DO
-  WRITE(*,*) "-----------Two Potential OK"
   DEALLOCATE(PHI_Rw, PHI_Sw)
   ! phi_S et phi_R OK (Nw, N_, Npanels)               
 
@@ -361,7 +356,6 @@ CONTAINS
     END DO
     CLOSE(unit) 
   END DO     
-! WRITE(*,*) "----------------Read cylsurface ok-----------------"
   indice_p=1
   DO i=1, Nw
     ETAc(indice_p, :, :)=ETAc(indice_p, :, :)*G/(II*omega(i))
@@ -400,36 +394,47 @@ CONTAINS
 
   COMPLEX, DIMENSION(Nw, Nrad, ParamsIT%Mcyl%Ntheta, ParamsIT%Mcyl%Nz)      :: PHI_R 
   COMPLEX, DIMENSION(Nw, Nbeta_iso, ParamsIT%Mcyl%Ntheta, ParamsIT%Mcyl%Nz) :: PHI_S 
-  COMPLEX, DIMENSION(Nw, Nrad, Nint)       :: A_RAD
-  COMPLEX, DIMENSION(Nbeta_iso, Nint)      :: A_SCAT
-  INTEGER :: i, m 
+  COMPLEX, DIMENSION(Nw, Nrad, 2*Mtronc+1)       :: A_RAD
+  COMPLEX, DIMENSION(Nbeta_iso, 2*Mtronc+1)      :: A_SCAT, A_I
+  INTEGER :: i, m, i_m
   REAL    :: Hankel_2, coef, k
   COMPLEX, DIMENSION(:), ALLOCATABLE :: int_R, int_S
 
   CALL ReadTwoPotential(PHI_S, PHI_R, ParamsIT%Mcyl, Env%G, wd)
-  WRITE(*,*) "--------------Potential OK"
   ALLOCATE(int_R(Nrad), int_S(Nbeta_iso))
   DO i=1, Nw 
-    IF ((Env%depth == INFINITE_DEPTH) .OR. (omega(i)**2*Env%depth/Env%g >= 20)) THEN
+    ! calcul wave number
+    IF (omega(i)**2*Env%depth/Env%g >= 20) THEN
       k = omega(i)**2/Env%g
     ELSE
       k = X0(omega(i)**2*Env%depth/Env%g)/Env%depth
       ! X0(y) returns the solution of y = x * tanh(x)
     END IF
+
+    ! calcul coefficient a
     coef=2*COSH(k*Env%Depth)/(Env%Depth*(1+SINH(2*k*Env%Depth)/(2*k*Env%Depth)))
     coef=coef*(-omega(i)/(2*PI*Env%G))
-    DO m=1, Nint 
+    DO i_m=1, 2*Mtronc+1
+      m=i_m-Mtronc-1
+      ! fonction de Hankel d'ordre 2
+      ! Hm(2)= -iJm (exp(i*pi*m)-(-1)^m)/sin(pi*m) car J-m = (-1)^m Jm
       Hankel_2=-II*fun_BESSJ(m, k*ParamsIT%Mcyl%R)*(EXP(II*PI*m)-(-1)**m)/SIN(PI*m)
-      int_R=CALCUL_INT_A(m, k, Env%Depth, PHI_R(i,:,:,:), ParamsIT%Mcyl)
-      int_S=CALCUL_INT_A(m, k, Env%Depth, PHI_S(i,:,:,:), ParamsIT%Mcyl)
-        ! WRITE(*,*) i, m, "--------------Integral OK"
-
-      A_RAD(i,:,m)=II*coef*int_R(:)/Hankel_2
-      A_SCAT(:,m)=II*coef*int_S(:)/Hankel_2
-      
+      int_R=CALCUL_INT_A(i_m, k, Env%Depth, PHI_R(i,:,:,:), ParamsIT%Mcyl)
+      int_S=CALCUL_INT_A(i_m, k, Env%Depth, PHI_S(i,:,:,:), ParamsIT%Mcyl)
+      A_RAD(i,:,i_m)=II*coef*int_R(:)/Hankel_2
+      A_SCAT(:,i_m)=II*coef*int_S(:)/Hankel_2  
+      A_I(:,i_m)=EXP(-II*m*(beta_iso(:)+PI/2)) ! theory
+      ! A_I(:,i_m)=EXP(II*m*(-beta_iso(:)+PI/2)) ! convention Nemoh python
     END DO
+    
+    ! Nmode = 2*Mtruc+1     = Nbeta_iso si impair !!
+    ! LU_solver OK que pour une matrice carrée
+    CALL LU_SOLVER(A_I,A_SCAT,ParamsIT%D(i,:,:),Nbeta_iso,2*Mtronc+1,Nbeta_iso)
+    CALL LU_SOLVER(A_I,Fex_iso(i,:,:),ParamsIT%G(i,:,:),Nbeta_iso,2*Mtronc+1,Nint)
+
+    ! réduction ?
   END DO
-  WRITE(*,*) "-------- Calcul Matrix"
+  WRITE(*,*) "-------- Calcul Matrix OK"
 
     ! - calcul a_s_scat à partir du flux phi_scat 
     ! - calcul a_s_rad à partir du flux phi_rad
@@ -438,7 +443,9 @@ CONTAINS
     ! - Resolution a_i * D = a_s_scat 
     ! - Resolution a_i * G = fex
     ! Besoin solveur LU, GMRES 
-    ! - troncature et réduction ???
+    ! - troncature = modes pour les directions des vagues avec Hm
+    ! - réduction pour elever modes non significatifs
+
   END SUBROUTINE CalculMatrix
 
   FUNCTION CALCUL_INT_A(m, k, h, PHI, Mcyl) RESULT(INT_A)
@@ -497,7 +504,14 @@ CONTAINS
 
     
   WRITE(*,*) "-------- Solve IT"
-
+  ! 3 - calcul Madd, Crad, Fex pour l'ensemble du système (inspiration code python)
+          ! Attention : transposée ou pas ??
+          ! recup params sur la ferme
+          ! - calcul matrice transformation T
+          ! - troncature ???
+          ! Besoin des fonctions de Bessel
+          ! - calculer Fex à partir scatting (theory OK)
+          ! - calculer Madd, Crad en passant par FR à partir radiation (theory OK)
   END SUBROUTINE SolveITproblem
 
 END MODULE

@@ -218,6 +218,11 @@
                             InpNEMOHCAL%IntTheory%Cylsurface%cyldZ
                 IF (InpNEMOHCAL%IntTheory%Cylsurface%cylR.GT.0 ) THEN
                             InpNEMOHCAL%IntTheory%Cylsurface%Switch=1
+                            IF (InpNEMOHCAL%Env%Depth.LE.0.) THEN
+                                InpNEMOHCAL%IntTheory%Cylsurface%Switch=0
+                                InpNEMOHCAL%IntTheory%Cylsurface%cylR=0
+                                WRITE(*,'(A)') 'Cannot compute cyldindrical surface for infinite water depth'
+                            END IF
                 ELSE
                             InpNEMOHCAL%IntTheory%Cylsurface%Switch=0
                 ENDIF
