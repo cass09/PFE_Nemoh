@@ -4,6 +4,7 @@ set(SOLVER_SRC
     ${EXTERNAL_SRC_DIR}/GMRES_CERFACS/cPackgmres.f
     ${EXTERNAL_SRC_DIR}/GMRES_CERFACS/zPackgmres.f
     ${EXTERNAL_SRC_DIR}/GMRES_CERFACS/blas_rot.f
+    ${EXTERNAL_SRC_DIR}/MBESSEL.f90
     ${CORE_SRC_DIR}/OUTPUT.f90
     ${CORE_SRC_DIR}/M_SOLVER.f90
     ${CORE_SRC_DIR}/GREEN_1.f90
@@ -22,7 +23,7 @@ set(SOLVER_SRC
     ${COMMON_SRC_DIR}/Mesh.f90
     ${COMMON_SRC_DIR}/Face.f90
     NEMOH.f90)
-# CML modifs : ajout InteractionTheory
+# CML modifs : ajout InteractionTheory + MBESSEL
 add_executable(solver ${SOLVER_SRC})
 
 target_link_libraries(solver ${LAPACK_LIBRARIES})

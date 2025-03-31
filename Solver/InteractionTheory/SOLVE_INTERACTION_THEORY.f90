@@ -47,23 +47,31 @@ MODULE SOLVE_INTERACTION_THEORY
   USE MEnvironment,       ONLY: TEnvironment
   USE M_SOLVER,           ONLY:GAUSSZ,LU_INVERS_MATRIX,GMRES_SOLVER, &
                                ID_GAUSS,ID_GMRES,TSolver
-
+  USE MBESSEL,            ONLY:fun_BESSJ
+  USE Elementary_functions, ONLY: X0
   IMPLICIT NONE
 
-  PUBLIC :: SOLVE_POTENTIAL_MATRIX, ReadTInteractionTheory, CloseIT, &
-   ReadIndex, ReadParamIso, OneToTwoPotential, CalculParamIso, &
-   CalculMatrix, SolveITproblem
+  PUBLIC :: SOLVE_POTENTIAL_MATRIX
+
+
+  TYPE Tcylsurface 
+    INTEGER   :: Ntheta, Nz
+    REAL      :: R
+  END TYPE
 
   TYPE TInteractionTheory
-    INTEGER       :: run_IT, Nb   !Nb bodies
-    REAL, DIMENSION(:,:) , ALLOCATABLE :: Coord   ! coord bodies center Nbx2 (même altitude)
-    REAL,DIMENSION(:)    , ALLOCATABLE :: wave_dir
-    REAL,DIMENSION(:,:,:), ALLOCATABLE :: Madd, Crad
+    INTEGER       :: Nb !Nb bodies
+    REAL, DIMENSION(:,:),     ALLOCATABLE :: Coord   ! coord bodies center Nbx2 (même altitude)
+    REAL,DIMENSION(:),        ALLOCATABLE :: wave_dir
+    REAL,DIMENSION(:,:,:),    ALLOCATABLE :: Madd, Crad
     COMPLEX,DIMENSION(:,:,:), ALLOCATABLE :: Fex
-    REAL,DIMENSION(:,:,:), ALLOCATABLE :: D, G
+    REAL,DIMENSION(:,:,:),    ALLOCATABLE :: D, G
+    TYPE(Tcylsurface)   :: Mcyl
   END TYPE TInteractionTheory
 
-  PRIVATE
+  PRIVATE :: ReadTInteractionTheory, CloseIT, &
+   ReadIndex, ReadParamIso, OneToTwoPotential, ReadTwoPotential, CalculParamIso, &
+   CalculMatrix, SolveITproblem
   ! Those variables will be conserved between calls of the subroutine.
   INTEGER :: Nw, Nbeta_iso, Nrad, Nint, Ndir
   REAL, DIMENSION(:), ALLOCATABLE              :: omega
@@ -71,46 +79,40 @@ MODULE SOLVE_INTERACTION_THEORY
 CONTAINS
 
   SUBROUTINE SOLVE_POTENTIAL_MATRIX             &
-  (VFace, Mesh, Env,SolverOpt, Nproblems, Potential, Switch_type, wd)
+  (VFace, Mesh, Env,SolverOpt, wd)
   IMPLICIT NONE
 
-  TYPE(TVFace),                                   INTENT(IN) :: VFace
-  TYPE(TMesh),                                    INTENT(IN) :: Mesh
-  TYPE(TEnvironment),                             INTENT(IN) :: Env
-  TYPE(TSolver),                                  INTENT(IN) :: SolverOpt
-  COMPLEX, DIMENSION(Nproblems, Mesh%Npoints),    INTENT(IN) :: Potential          ! Computed potential
-  INTEGER,                                        INTENT(IN) :: Nproblems
-  INTEGER,DIMENSION(Nproblems),                   INTENT(IN) :: Switch_Type
-  CHARACTER(LEN=*),                               INTENT(IN) :: wd
+  TYPE(TVFace),                         INTENT(IN) :: VFace
+  TYPE(TMesh),                          INTENT(IN) :: Mesh
+  TYPE(TEnvironment),                   INTENT(IN) :: Env
+  TYPE(TSolver),                        INTENT(IN) :: SolverOpt
+  ! COMPLEX, DIMENSION(Nproblems, Mesh%Npoints),  INTENT(IN) :: Potential          ! Computed potential
+  ! INTEGER,                              INTENT(IN) :: Nproblems
+  ! INTEGER,DIMENSION(Nproblems),         INTENT(IN) :: Switch_Type
+  CHARACTER(LEN=*),                     INTENT(IN) :: wd
 
-  TYPE(TInteractionTheory)                     :: ParamsIT
+  TYPE(TInteractionTheory)      :: ParamsIT
   REAL, DIMENSION(:), ALLOCATABLE              :: beta_iso
   REAL,DIMENSION(:,:,:), ALLOCATABLE :: Madd_iso, Crad_iso
   COMPLEX,DIMENSION(:,:,:), ALLOCATABLE :: Fex_iso
-  !  use Nmesh au lieu de Mesh entier parfois
   
+  WRITE(*,*) "-------------------Début"
   CALL ReadTInteractionTheory(ParamsIT, wd)
+  CALL ReadIndex(beta_iso, wd)
+  
+  ALLOCATE(Fex_iso(Nw, Nbeta_iso, Nint), Madd_iso(Nw, Nrad, Nint), Crad_iso(Nw, Nrad, Nint))
+  CALL ReadParamIso(Fex_iso, Madd_iso, Crad_iso, wd)
+  WRITE(*,*) "-----------------Params ok"
 
-  IF (ParamsIT%run_IT==1) THEN
-    WRITE(*,*) "-------------------Début"
-    CALL ReadIndex(beta_iso, wd)
-   
-    ALLOCATE(Fex_iso(Nw, Nbeta_iso, Nint), Madd_iso(Nw, Nrad, Nint), Crad_iso(Nw, Nrad, Nint))
-    CALL ReadParamIso(Fex_iso, Madd_iso, Crad_iso, wd)
-    WRITE(*,*) "----------------ReadParams Iso OK"
+  CALL CalculMatrix  &
+  (Env, SolverOpt, ParamsIT, beta_iso, Fex_iso, wd)
 
-    CALL CalculMatrix  &
-    (Env, Mesh%Npoints, Potential, Switch_Type, ParamsIT, beta_iso, Fex_iso)
+  CALL SolveITproblem(ParamsIT, Madd_iso, Crad_iso)
 
-    CALL SolveITproblem(ParamsIT, Madd_iso, Crad_iso)
-
-    DEALLOCATE(beta_iso, omega)
-    DEALLOCATE(Fex_iso, Crad_iso, Madd_iso)
-    WRITE(*,*) "-------------------END"
-  ELSE 
-    WRITE(*,*) "--------- Interaction Theory not activated ------------"
-    
-  END IF
+  DEALLOCATE(beta_iso, omega)
+  DEALLOCATE(Fex_iso, Crad_iso, Madd_iso)
+  WRITE(*,*) "-------------------END"
+  
   CALL CloseIT(ParamsIT)
 
   END SUBROUTINE SOLVE_POTENTIAL_MATRIX
@@ -129,6 +131,29 @@ CONTAINS
 
   END SUBROUTINE CloseIT
 
+  ! SUBROUTINE ReadTInteractionTheory             &
+  ! (InpNEMOHCAL, InputIT)
+
+  ! IMPLICIT NONE
+  ! TYPE(TNemCal),                :: InpNEMOHCAL
+  ! TYPE(TInteractionTheory),    INTENT(OUT) :: InputIT
+
+  ! INTEGER :: j, k
+  ! REAL    :: dir_min, dir_max
+
+  ! InputIT%Nb =InpNEMOHCAL%IntTheory%Nb
+  ! ALLOCATE(InputIT%Coord(InputIT%Nb, 2))
+  ! InputIT%Coord =InpNEMOHCAL%IntTheory%Bcoord
+  ! Ndir =InpNEMOHCAL%IntTheory%NDir
+  ! ALLOCATE(InputIT%wave_dir(Ndir))
+  ! dir_max =InpNEMOHCAL%IntTheory%DirMax
+  ! dir_min =InpNEMOHCAL%IntTheory%DirMin
+  ! DO j=1,Ndir
+  !   InputIT%wave_dir(j)=(dir_min+(dir_max-dir_min)*(j-1)/(Ndir-1))*PI/180.
+  ! END DO
+
+  ! END SUBROUTINE ReadTInteractionTheory
+
   SUBROUTINE ReadTInteractionTheory             &
   (InputIT, wd)
 
@@ -141,39 +166,21 @@ CONTAINS
   REAL    :: dir_min, dir_max
 
   OPEN(15,FILE=TRIM(wd)//'/input_IT.dat')
-    READ(15,*) InputIT%run_IT
-    ! IF (ParamsIT%run_IT==0) THEN
-    !   WRITE(*,*) "--------- Interaction Theory not activated ------------"
-    !   CLOSE(15)
-    !   RETURN
-    ! END IF
+    READ(15,*) 
+    READ(15,*) 
     READ(15,*) InputIT%Nb
     ALLOCATE(InputIT%Coord(InputIT%Nb, 2))
     DO k=1,InputIT%Nb
         READ(15,*) InputIT%Coord(k,1),InputIT%Coord(k,2)
     END DO
     READ(15,*) Ndir, dir_min, dir_max
+    READ(15,*) InputIT%Mcyl%R, InputIT%Mcyl%Ntheta, InputIT%Mcyl%Nz
   CLOSE(15)
   ALLOCATE(InputIT%wave_dir(Ndir))
   DO j=1,Ndir
     InputIT%wave_dir(j)=(dir_min+(dir_max-dir_min)*(j-1)/(Ndir-1))*PI/180.
   END DO
-
-  OPEN(16, FILE=TRIM(wd)//'/Nemoh.cal')
-    READ(16,*) !--- Environment ----------------------------!
-    READ(16,*) ! RHO
-    READ(16,*) ! G
-    READ(16,*) ! Depth
-    READ(16,*) ! Xeff, Yeff
-    READ(16,*) !--- Description of floating bodies-----------!
-    READ(16,*) Nb_NEMOHcal
-  CLOSE(16)
-  ! Récupérer le nombre de body dans le fichier Nemoh.cal
-  ! InteractionTheory appliquée que si BEM exécutée sur UN body 
-  IF (Nb_NEMOHcal .NE. 1) THEN 
-    InputIT%run_IT = 0
-    WRITE(*,*) "BEM resolution must be on only ONE body to apply Interaction Theory"
-  END IF
+  ! WRITE(*,*) "----------------Read Params IT OK"
 
   END SUBROUTINE ReadTInteractionTheory
 
@@ -201,7 +208,8 @@ CONTAINS
     READ(17,*) (beta_iso(k),k=1,Nbeta_iso)
     READ(17,*) (omega(k),k=1,Nw)
   CLOSE(17)
-  
+  ! WRITE(*,*) "----------------ReadParams Iso OK"
+
   END SUBROUTINE ReadIndex
 
 
@@ -209,8 +217,8 @@ CONTAINS
   (Env, PHI_S, PHI_R)
   IMPLICIT NONE
 
-  TYPE(TEnvironment),           INTENT(IN)  :: Env
-  COMPLEX, DIMENSION(:,:,:),    INTENT(IN)  :: PHI_S, PHI_R  
+  TYPE(TEnvironment),          INTENT(IN) :: Env
+  COMPLEX, DIMENSION(:,:,:),   INTENT(IN) :: PHI_S, PHI_R  
 
   ! calcul momentum avec rho, phi, normal   
   ! calcul Fex, Madd, Crad avec omega et momentum
@@ -223,14 +231,13 @@ CONTAINS
   (Fex, Madd, Crad, wd)
   IMPLICIT NONE
 
-  CHARACTER(LEN=*),             INTENT(IN)  :: wd 
-  REAL,DIMENSION(Nw,Nrad,Nint),        INTENT(OUT) :: Madd, Crad
-  COMPLEX,DIMENSION(Nw,Nbeta_iso,Nint),     INTENT(OUT) :: Fex
+  CHARACTER(LEN=*),                     INTENT(IN)  :: wd 
+  REAL,DIMENSION(Nw,Nrad,Nint),         INTENT(OUT) :: Madd, Crad
+  COMPLEX,DIMENSION(Nw,Nbeta_iso,Nint), INTENT(OUT) :: Fex
 
   REAL,DIMENSION(:),ALLOCATABLE :: line
   INTEGER :: i, j, k, c
 
-  ! WRITE(*,*) "-----------------Param iso"
   ALLOCATE(line(2*Nint))
   OPEN(18,FILE=TRIM(wd)//'/results/Forces.dat')
   READ(18,*)
@@ -241,7 +248,6 @@ CONTAINS
             Fex(i,j,k)=line(2*k-1)*CEXP(CMPLX(0.,1.)*line(2*k))
         END DO
       END DO
-        ! WRITE(*,*) "-----------------Fex ok"
       DO j=1,Nrad
         READ(18,*) (line(c),c=1,2*Nint)
         DO k=1,Nint
@@ -280,9 +286,9 @@ CONTAINS
   (Nmesh, Potential, Switch_type, PHI_S, PHI_R)
   IMPLICIT NONE
   ! Input/output
-  INTEGER,                                         INTENT(IN) :: Nmesh
-  COMPLEX, DIMENSION(Nw*(Nbeta_iso+Nrad), Nmesh),  INTENT(IN) :: Potential          ! Computed potential
-  INTEGER,DIMENSION(Nw*(Nbeta_iso+Nrad)),          INTENT(IN) :: Switch_Type
+  INTEGER,                                        INTENT(IN)  :: Nmesh
+  COMPLEX, DIMENSION(Nw*(Nbeta_iso+Nrad), Nmesh), INTENT(IN)  :: Potential          ! Computed potential
+  INTEGER,DIMENSION(Nw*(Nbeta_iso+Nrad)),         INTENT(IN)  :: Switch_Type
   COMPLEX, DIMENSION(Nw,Nbeta_iso,Nmesh),       INTENT(INOUT) :: PHI_S
   COMPLEX, DIMENSION(Nw,Nrad,Nmesh),            INTENT(INOUT) :: PHI_R
 
@@ -291,7 +297,6 @@ CONTAINS
   INTEGER :: i, j, indice_S, indice_R
 
   ALLOCATE(PHI_Rw(Nw*Nrad, Nmesh), PHI_Sw(Nw*Nbeta_iso, Nmesh))
-  ! WRITE(*,*) "allocate ok"
   indice_S = 1
   indice_R = 1
   DO i=1, Nw*(Nbeta_iso+Nrad)
@@ -303,7 +308,6 @@ CONTAINS
           indice_R=indice_R+1      
     END IF
   END DO
-  ! WRITE(*,*) "Boucle 1 ok"
   indice_S = 1
   indice_R = 1
   DO i=1,Nw  ! boucle à étendre jusqu'à la fin ??
@@ -316,34 +320,116 @@ CONTAINS
         indice_R=indice_R+1 
       END DO
   END DO
-  ! WRITE(*,*) "boucle 2 ok"
+  WRITE(*,*) "-----------Two Potential OK"
   DEALLOCATE(PHI_Rw, PHI_Sw)
   ! phi_S et phi_R OK (Nw, N_, Npanels)               
 
 
   END SUBROUTINE OneToTwoPotential
 
+  SUBROUTINE ReadTwoPotential             &
+  (PHI_S, PHI_R, Mcyl, G, wd)
+  IMPLICIT NONE
 
+  TYPE(Tcylsurface),                            INTENT(IN)  :: Mcyl
+  REAL,                                         INTENT(IN)  :: G
+  COMPLEX, DIMENSION(Nw,Nbeta_iso,Mcyl%Ntheta, Mcyl%Nz),INTENT(INOUT) :: PHI_S
+  COMPLEX, DIMENSION(Nw,Nrad,Mcyl%Ntheta, Mcyl%Nz),     INTENT(INOUT) :: PHI_R
+  CHARACTER(LEN=*),                             INTENT(IN)  :: wd 
+
+
+
+  COMPLEX, DIMENSION(Nw*(Nrad+Nbeta_iso), Mcyl%Ntheta, Mcyl%Nz) :: ETAc 
+  CHARACTER(LEN=30) :: filename 
+  INTEGER :: Np, i, j, k, indice_p, unit
+  REAL    :: x, y, z, eta_amp, eta_phase
+
+  Np = Nw*(Nrad+Nbeta_iso)
+  DO i=1, Np
+    print*, "Unpack problem ", i, " / ", Np
+    ! Construire le nom du fichier
+    write(filename, '(A,I5.5,A)') TRIM(wd)//'/results/cylsurface.', i, '.dat'
+    unit = 20 + i  
+    open(unit=unit, file=trim(filename))
+    READ(unit,*)
+    READ(unit,*)
+    DO j=1, Mcyl%Ntheta
+      DO k=1, Mcyl%Nz
+        READ(unit,*) x, y, z, eta_amp, eta_phase
+        ETAc(i,j,k)=eta_amp*EXP(II*eta_phase)
+      END DO
+    END DO
+    CLOSE(unit) 
+  END DO     
+! WRITE(*,*) "----------------Read cylsurface ok-----------------"
+  indice_p=1
+  DO i=1, Nw
+    ETAc(indice_p, :, :)=ETAc(indice_p, :, :)*G/(II*omega(i))
+    DO j=1, Nbeta_iso
+      PHI_S(i,j, :, :)=ETAc(indice_p, :, :)
+      indice_p=indice_p+1
+    END DO 
+    DO j=1, Nrad
+      PHI_R(i,j, :, :)=ETAc(indice_p, :, :)
+      indice_p=indice_p+1
+    END DO 
+  END DO 
+
+  ! freesurface
+  ! ETA(j) = II*omega/Env%G*PHI
+
+  ! python
+  ! Scattering[ind] *= g/1j/fr
+  ! Radiation[ind] *= g/1j/fr*(-1j*fr)
+
+  END SUBROUTINE ReadTwoPotential
 
 
 
   SUBROUTINE CalculMatrix             &
-  (Env, Nmesh, Potential, Switch_Type, ParamsIT, beta_iso, Fex_iso)
+  (Env, SolverOpt, ParamsIT, beta_iso, Fex_iso, wd)
 
   IMPLICIT NONE
   TYPE(TInteractionTheory),                      INTENT(INOUT) :: ParamsIT
-  INTEGER,                                        INTENT(IN)   :: Nmesh
   TYPE(TEnvironment),                             INTENT(IN)   :: Env
-  COMPLEX, DIMENSION(Nw*(Nbeta_iso+Nrad), Nmesh), INTENT(IN)   :: Potential         
-  INTEGER,DIMENSION(Nw*(Nbeta_iso+Nrad)),         INTENT(IN)   :: Switch_Type
+  TYPE(TSolver),                                  INTENT(IN)   :: SolverOpt
   REAL, DIMENSION(Nbeta_iso),                     INTENT(IN)   :: beta_iso
   COMPLEX,DIMENSION(Nw,Nbeta_iso,Nint),           INTENT(IN)   :: Fex_iso
+  CHARACTER(LEN=*),                               INTENT(IN)   :: wd 
 
-  COMPLEX, DIMENSION(:,:,:), ALLOCATABLE       :: PHI_S, PHI_R 
 
-  ALLOCATE(PHI_R(Nw, Nrad, Nmesh), PHI_S(Nw,Nbeta_iso, Nmesh))
-  CALL OneToTwoPotential(Nmesh, Potential, Switch_type, PHI_S, PHI_R)
-  WRITE(*,*) "-------- Potential OK"
+  COMPLEX, DIMENSION(Nw, Nrad, ParamsIT%Mcyl%Ntheta, ParamsIT%Mcyl%Nz)      :: PHI_R 
+  COMPLEX, DIMENSION(Nw, Nbeta_iso, ParamsIT%Mcyl%Ntheta, ParamsIT%Mcyl%Nz) :: PHI_S 
+  COMPLEX, DIMENSION(Nw, Nrad, Nint)       :: A_RAD
+  COMPLEX, DIMENSION(Nbeta_iso, Nint)      :: A_SCAT
+  INTEGER :: i, m 
+  REAL    :: Hankel_2, coef, k
+  COMPLEX, DIMENSION(:), ALLOCATABLE :: int_R, int_S
+
+  CALL ReadTwoPotential(PHI_S, PHI_R, ParamsIT%Mcyl, Env%G, wd)
+  WRITE(*,*) "--------------Potential OK"
+  ALLOCATE(int_R(Nrad), int_S(Nbeta_iso))
+  DO i=1, Nw 
+    IF ((Env%depth == INFINITE_DEPTH) .OR. (omega(i)**2*Env%depth/Env%g >= 20)) THEN
+      k = omega(i)**2/Env%g
+    ELSE
+      k = X0(omega(i)**2*Env%depth/Env%g)/Env%depth
+      ! X0(y) returns the solution of y = x * tanh(x)
+    END IF
+    coef=2*COSH(k*Env%Depth)/(Env%Depth*(1+SINH(2*k*Env%Depth)/(2*k*Env%Depth)))
+    coef=coef*(-omega(i)/(2*PI*Env%G))
+    DO m=1, Nint 
+      Hankel_2=-II*fun_BESSJ(m, k*ParamsIT%Mcyl%R)*(EXP(II*PI*m)-(-1)**m)/SIN(PI*m)
+      int_R=CALCUL_INT_A(m, k, Env%Depth, PHI_R(i,:,:,:), ParamsIT%Mcyl)
+      int_S=CALCUL_INT_A(m, k, Env%Depth, PHI_S(i,:,:,:), ParamsIT%Mcyl)
+        ! WRITE(*,*) i, m, "--------------Integral OK"
+
+      A_RAD(i,:,m)=II*coef*int_R(:)/Hankel_2
+      A_SCAT(:,m)=II*coef*int_S(:)/Hankel_2
+      
+    END DO
+  END DO
+  WRITE(*,*) "-------- Calcul Matrix"
 
     ! - calcul a_s_scat à partir du flux phi_scat 
     ! - calcul a_s_rad à partir du flux phi_rad
@@ -353,12 +439,53 @@ CONTAINS
     ! - Resolution a_i * G = fex
     ! Besoin solveur LU, GMRES 
     ! - troncature et réduction ???
-
-
-  DEALLOCATE(PHI_R, PHI_S)
   END SUBROUTINE CalculMatrix
 
+  FUNCTION CALCUL_INT_A(m, k, h, PHI, Mcyl) RESULT(INT_A)
+  IMPLICIT NONE
 
+  INTEGER                    :: m
+  TYPE(Tcylsurface)          :: Mcyl
+  REAL                       :: k, h
+  COMPLEX, DIMENSION(:,:,:)  :: PHI     ! N x Ntheta x Nz
+  COMPLEX, DIMENSION(SIZE(PHI, 1))   :: INT_A
+
+  REAL, DIMENSION(Mcyl%Ntheta) :: theta
+  REAL, DIMENSION(Mcyl%Nz)     :: z
+  REAL    :: dth, dz
+  INTEGER :: i, j
+  COMPLEX, DIMENSION(SIZE(PHI, 1), SIZE(PHI, 2), SIZE(PHI, 3)) :: COEF
+  COMPLEX, DIMENSION(SIZE(PHI, 1), SIZE(PHI, 3)) :: INT_TH
+  COMPLEX, DIMENSION(SIZE(PHI, 1)) :: INT_Z
+
+  ! à mettre avant boucle sur m ?
+  DO i=1,Mcyl%Ntheta
+    theta(i)=2*PI*(i-1)/(Mcyl%Ntheta-1)
+  END DO
+  dth=2*PI/Mcyl%Ntheta
+  DO i=1,Mcyl%Nz
+    z(i)=-h*(i-1)/(Mcyl%Nz-1)
+  END DO
+  dz=h/Mcyl%Nz
+
+  DO j=1,Mcyl%Nz
+    DO i=1,Mcyl%Ntheta
+        COEF(:, i, j) = COSH(k*(h+z(j)))*EXP(-II*m*theta(j))*PHI(:, i, j)
+    END DO
+  END DO
+  INT_TH=0
+  INT_Z=0
+  DO j=1,Mcyl%Nz
+    DO i=1,Mcyl%Ntheta-1
+        INT_TH(:,j)=INT_TH(:,j)+(COEF(:,i, j)+COEF(:,i,j+1))*dth/2
+    END DO
+  END DO
+  DO j=1,Mcyl%Nz-1
+    INT_Z(:)=INT_Z(:)+(INT_TH(:,j)+INT_TH(:,j+1))*dz/2
+  END DO
+
+  INT_A=INT_Z
+  END FUNCTION CALCUL_INT_A
 
 
   SUBROUTINE SolveITproblem             &
@@ -366,9 +493,10 @@ CONTAINS
 
   IMPLICIT NONE
   TYPE(TInteractionTheory),    INTENT(INOUT) :: ParamsIT
-  REAL,DIMENSION(Nw,Nrad,Nint),   INTENT(IN) :: Madd_iso, Crad_iso
+  REAL,DIMENSION(Nw,Nrad,Nint),  INTENT(IN)  :: Madd_iso, Crad_iso
 
     
+  WRITE(*,*) "-------- Solve IT"
 
   END SUBROUTINE SolveITproblem
 

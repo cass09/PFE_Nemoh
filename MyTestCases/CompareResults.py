@@ -1,5 +1,7 @@
 import numpy as np
 import re  # Pour utiliser les expressions régulières
+import matplotlib.pyplot as plt
+
 
 def read_RAD_BEM(fileRAD):
     frequencies = []  # Liste pour stocker les fréquences
@@ -33,12 +35,12 @@ def read_RAD_BEM(fileRAD):
             matrices.append(current_matrix)
         
         # Case ONE body !!!
-        ONE_BODY = True
+        ONE_BODY = False
         if ONE_BODY:
             matrices = [[[value]] for value in frequencies[1::2]]  # Indices impairs
             frequencies = frequencies[::2]   # Indices pairs
-        print('BEM - Nw = ', len(frequencies))
-        print('BEM - Ndof x Nforce = ', len(matrices))
+        # print('BEM - Nw = ', len(frequencies))
+        # print('BEM - Ndof x Nforce = ', len(matrices))
     return frequencies, matrices
 
 def read_RAD_PIT(fileRAD):
@@ -80,8 +82,8 @@ def read_RAD_PIT(fileRAD):
         if current_matrix:
             matrices.append(current_matrix)
             frequencies.append(previous_period)
-    print('PIT - Nw = ', len(frequencies))
-    print('PIT - Ndof x Nforce = ', len(matrices))
+    # print('PIT - Nw = ', len(frequencies))
+    # print('PIT - Ndof x Nforce = ', len(matrices))
     return frequencies, matrices
 
 # # Exemple d'utilisation
@@ -109,14 +111,20 @@ def CompareResultsRAD(fileBEM, filePIT) :
         else :
             errorL2 = np.sqrt(np.sum((np.array(Coef_BEM) - np.array(Coef_PIT))**2))
             errorINF = np.max(np.abs(np.array(Coef_BEM) - np.array(Coef_PIT)))
+
+            normL2_BEM = np.sqrt(np.sum(np.array(Coef_BEM)**2))
+            relative_errorL2 = errorL2 / normL2_BEM if normL2_BEM != 0 else np.nan
+
+            max_BEM = np.max(np.abs(np.array(Coef_BEM)))
+            relative_errorINF = errorINF / max_BEM if max_BEM != 0 else np.nan
     else :
         print("fréquences différentes")
         print('BEM', freq_BEM)
         print('PIT', freq_PIT)
-        errorL2=[]
-        errorINF=[]
+        relative_errorL2=[]
+        relative_errorINF=[]
     
-    return errorL2, errorINF
+    return relative_errorL2, relative_errorINF
 
 def read_Fex_BEM(fileFex):
     beta_values = []  # Liste pour stocker les valeurs de beta
@@ -140,7 +148,7 @@ def read_Fex_BEM(fileFex):
                     # Si un beta est trouvé, le stocker
                     if beta is not None and matrix:
                         # Si une matrice est déjà en cours pour le précédent beta, on l'ajoute
-                        beta_values.append(beta*180/np.pi) 
+                        beta_values.append(beta) 
                         matrices.append(np.array(matrix))
                         matrix_abs = []
                         matrix_phase = []
@@ -166,7 +174,7 @@ def read_Fex_BEM(fileFex):
 
         # Ajouter la dernière matrice et beta restant à la fin du fichier
         if beta is not None and matrix:
-            beta_values.append(beta*180/np.pi)
+            beta_values.append(beta)
             matrices.append(np.array(matrix)) 
         # Séparer les colonnes de la matrice en valeurs absolues et phases
             matrix_abs = []
@@ -182,8 +190,8 @@ def read_Fex_BEM(fileFex):
             matrices_phase.append(np.array(matrix_phase))   
         # print(matrices[0][0], matrices_abs[0][0], matrices_phase[0][0])
     # Retourner les valeurs de beta, les fréquences et les matrices
-    print('BEM - Nbeta = ', len(beta_values))
-    print('BEM - Nforce = ', len(matrices_abs))
+    # print('BEM - Nbeta = ', len(beta_values))
+    # print('BEM - Nforce = ', len(matrices_abs))
     return beta_values, frequencies, matrices_abs, matrices_phase
 
 def read_Fex_PIT(fileFex):
@@ -228,12 +236,12 @@ def read_Fex_PIT(fileFex):
         if current_matrix:
             matrices.append(current_matrix)
             beta_values.append(previous_beta)
-    print('PIT - Nbeta = ', len(beta_values))
-    print('PIT - Nforce = ', len(matrices))
+    # print('PIT - Nbeta = ', len(beta_values))
+    # print('PIT - Nforce = ', len(matrices))
     return beta_values, frequencies, matrices
 
 def CompareResultsFex(fileBEM, filePIT) :
-    beta_BEM, freq_BEM, Coef_BEM_abs, Coef_BEM_ph = read_Fex_BEM(Fex_BEM)
+    beta_BEM, freq_BEM, Coef_BEM_abs, Coef_BEM_ph = read_Fex_BEM(fileBEM)
     beta_PIT, freq_PIT, Coef_PIT = read_Fex_PIT(filePIT)
 
     # if np.all(np.isclose(freq_BEM, freq_PIT, atol=1e-2)) and np.all(np.isclose(beta_BEM, beta_PIT, atol=1e-2)):
@@ -246,34 +254,40 @@ def CompareResultsFex(fileBEM, filePIT) :
         else :
             errorL2 = np.sqrt(np.sum((np.array(Coef_BEM_abs) - np.array(Coef_PIT))**2))
             errorINF = np.max(np.abs(np.array(Coef_BEM_abs) - np.array(Coef_PIT)))
+
+            normL2_BEM = np.sqrt(np.sum(np.array(Coef_BEM_abs)**2))
+            relative_errorL2 = errorL2 / normL2_BEM if normL2_BEM != 0 else np.nan
+
+            max_BEM = np.max(np.abs(np.array(Coef_BEM_abs)))
+            relative_errorINF = errorINF / max_BEM if max_BEM != 0 else np.nan
     else :
         print("fréquences différentes")
         print('BEM', freq_BEM)
         print('PIT', freq_PIT)
-        errorL2=[]
-        errorINF=[]
+        relative_errorL2=[]
+        relative_errorINF=[]
     
-    return errorL2, errorINF
+    return relative_errorL2, relative_errorINF
 
 
-CM_BEM = "BEM_Nb1_dof1/results/CM.dat"
-CM_PIT = "PythonResults/BARGE/results/Global_Madd_d0.00.dat"
+CM_BEM = "BEM_Nb2_dof1_d1/results/CM.dat"
+CM_PIT = "/home/cassandra/Documents/PFE_MOREnergy/Nemoh_myVersion/DTOcean_raw/wec_inputs/PIT_Nb2_dof1/results/Global_Madd_d1.00.dat"
 
-CA_BEM = "BEM_Nb1_dof1/results/CA.dat"
-CA_PIT = "PythonResults/BARGE/results/Global_Crad_d0.00.dat"
+CA_BEM = "BEM_Nb2_dof1_d1/results/CA.dat"
+CA_PIT = "/home/cassandra/Documents/PFE_MOREnergy/Nemoh_myVersion/DTOcean_raw/wec_inputs/PIT_Nb2_dof1/results/Global_Crad_d1.00.dat"
 
-Fex_BEM = "BEM_Nb1_dof1/results/DiffractionForce.tec"  
-Fex_PIT = "PythonResults/BARGE/results/Global_Fe_d0.00.dat"
+Fex_BEM = "BEM_Nb2_dof1_d1/results/ExcitationForce.tec"  
+Fex_PIT = "/home/cassandra/Documents/PFE_MOREnergy/Nemoh_myVersion/DTOcean_raw/wec_inputs/PIT_Nb2_dof1/results/Global_Fe_d1.00.dat"
 
-CM = False
-CA = True
-Fex = True
+CM = True
+CA = False
+Fex = False
 
 if CM : 
     print("Comparaison sur Added Mass")
     L_inf_error, L2_error = CompareResultsRAD(CM_BEM, CM_PIT)
 
-    print("Erreur entre les données pour Added Mass :")
+    print("Ecart relatif entre les données pour Added Mass :")
     print("Norme infini - Norme L2 ")
     print(L_inf_error, L2_error)
     print(" ")
@@ -282,42 +296,91 @@ if CA :
     print("Comparaison sur Damping")
     L_inf_error, L2_error = CompareResultsRAD(CA_BEM, CA_PIT)
 
-    print("Erreur entre les données pour Damping :")
+    print("Ecart relatif entre les données pour Damping :")
     print("Norme infini - Norme L2 ")
     print(L_inf_error, L2_error)
     print(" ")
 
-# Exemple d'utilisation de la fonction
 if Fex : 
     print("Comparaison sur Fex")
     L_inf_error, L2_error = CompareResultsFex(Fex_BEM, Fex_PIT)
 
-    print("Erreur entre les données pour Fex :")
+    print("Ecart relatif entre les données pour Fex :")
     print("Norme infini - Norme L2 ")
     print(L_inf_error, L2_error)
 
-test = False
-if test : 
-    # Exemple de valeurs pour Coef_BEM et Coef_PIT
-    Coef_BEM = [0.3000,  0.266654E+04, 0.3895,  0.641170E+04, 0.4789,  0.134547E+05, 0.5684,  0.260890E+05, 0.6579,  0.482161E+05, 0.7474,  0.863001E+05, 0.8368,  0.150076E+06, 0.9263,  0.251168E+06, 1.0158,  0.395789E+06, 1.1053,  0.570975E+06, 1.1947,  0.739102E+06, 1.2842,  0.858127E+06, 1.3737,  0.909674E+06, 1.4632,  0.902934E+06, 1.5526,  0.858128E+06, 1.6421,  0.793974E+06, 1.7316,  0.722598E+06, 1.8211,  0.650887E+06, 1.9105,  0.581523E+06, 2.0000]
-    Coef_PIT = [0.3, 2.658450e+03, 0.3895,   6.385620e+03, 0.4789 , 1.338850e+04  ,0.5684 ,  2.593260e+04  ,0.6579 , 4.779290e+04  ,0.7474,  8.540450e+04  ,0.8368,   1.482600e+05  ,0.9263  , 2.474380e+05  ,1.01578,  3.903800e+05  ,1.1053 ,  5.625200e+05  ,1.1947,   7.293760e+05  ,1.2842  , 8.471140e+05  ,1.3737 ,  8.986340e+05  ,1.4632,   8.914700e+05  ,1.5526  , 8.460750e+05  ,1.6421 ,  7.823980e+05  ,1.7316 ,  7.092290e+05  ,1.8211  , 6.367760e+05  ,1.9105 ,  5.681760e+05 , 2.0 ]
-    # Coef_BEM = [1.2e3, 4.5e2, 6.7e1, 8.9e-1, 1.1e-2]
-    # Coef_PIT = [0.12e4, 4.4e2, 6.6e1, 9.0e-1, 1.0e-2]
-    # Calcul de l'erreur L2 (norme euclidienne)
-    errorL2 = np.sqrt(np.sum((np.array(Coef_BEM) - np.array(Coef_PIT))**2))
 
-    # Calcul de l'erreur infinie (valeur absolue maximale)
-    errors = np.abs(np.array(Coef_BEM) - np.array(Coef_PIT))
-    errorINF = np.max(errors)
+def Trace_RAD(fileBEM, filePIT, nom, param):
+    freq_BEM, Coef_BEM = read_RAD_BEM(fileBEM)
+    freq_PIT, Coef_PIT = read_RAD_PIT(filePIT)
 
-    # Trouver l'indice de l'erreur maximale
-    max_error_index = np.argmax(errors)
+    plt.figure(figsize=(8, 6))
+    plt.title(param)
+    plt.xlabel("Frequency")
+    plt.ylabel(nom)
+    plt.grid(True)
 
-    # Affichage des résultats en notation scientifique
-    print(f"Erreur L2: {errorL2:.3e}")  # Format scientifique avec 3 décimales
-    print(f"Erreur INF: {errorINF:.3e}")  # Format scientifique avec 3 décimales
+    # # Tracé des courbes
+    # plt.plot(freq_BEM, Coef_BEM[:][0][0], marker='o', linestyle='-', label="BEM - M_{11}")
+    # plt.plot(freq_BEM, Coef_BEM[:][0][1], marker='o', linestyle='-', label="BEM - M_{12}")
+    # plt.scatter(freq_BEM, Coef_BEM[:][1][0], label="BEM - M_{21}")
+    # plt.scatter(freq_BEM, Coef_BEM[:][1][1], label="BEM - M_{22}")
 
-    # Afficher les valeurs pour lesquelles l'erreur est maximale
-    print(f"Valeur de Coef_BEM à l'indice max: {Coef_BEM[max_error_index]}")
-    print(f"Valeur de Coef_PIT à l'indice max: {Coef_PIT[max_error_index]}")
-    print(f"Erreur maximale: {errors[max_error_index]:.3e}")
+    # plt.plot(freq_PIT, Coef_PIT[:][0][0], marker='o', linestyle='-', label="PIT - M_{11}")
+    # plt.plot(freq_PIT, Coef_PIT[:][0][1], marker='o', linestyle='-', label="PIT - M_{12}")
+    # plt.scatter(freq_PIT, Coef_PIT[:][1][0], label="PIT - M_{21}")
+    # plt.scatter(freq_PIT, Coef_PIT[:][1][1], label="PIT - M_{22}")
+    # Labels des coefficients
+    labels = ["M_{11}", "M_{12}", "M_{21}", "M_{22}"]
+    styles = ['o-', 's-', 'o', 's']  
+
+    # Tracé des courbes pour BEM
+    # for idx, (i, j) in enumerate([(0, 0), (0, 1), (1, 0), (1, 1)]):
+    for idx, (i, j) in enumerate([(0, 0), (0, 1)]):
+        # Accède aux éléments dans chaque matrice de Coef_BEM pour chaque fréquence
+        plt.plot(freq_BEM, [mat[i][j] for mat in Coef_BEM], styles[idx], label=f"BEM - {labels[idx]}")
+
+    # Tracé des points pour PIT
+    # for idx, (i, j) in enumerate([(0, 0), (0, 1), (1, 0), (1, 1)]):
+    for idx, (i, j) in enumerate([(0, 0), (0, 1)]):
+        # Accède aux éléments dans chaque matrice de Coef_PIT pour chaque fréquence
+        plt.plot(freq_PIT, [mat[i][j] for mat in Coef_PIT], styles[idx], label=f"PIT - {labels[idx]}")
+
+    # Légende et affichage
+    plt.legend(loc='best', fontsize='small', frameon=True)
+    plt.savefig(f"{nom}.png", dpi=300)
+    # plt.show()
+    return
+
+def Trace_Fex(fileBEM, filePIT, Nombre, param):
+    beta_BEM, freq_BEM, Coef_BEM_abs, Coef_BEM_ph = read_Fex_BEM(fileBEM)
+    beta_PIT, freq_PIT, Coef_PIT = read_Fex_PIT(filePIT)
+
+    # Tracé des matrices absolues
+    plt.figure(figsize=(10, 8))
+    plt.title(param)
+    plt.xlabel("Frequency")
+    plt.ylabel("|Fex|")
+    
+    # On suppose que les matrices sont une liste de matrices pour chaque valeur de beta
+    # for i, beta in enumerate(beta_BEM):
+    #     plt.plot(freq_BEM, Coef_BEM_abs[i][:, 0], 'o-', label=f"BEM_beta = {beta:.2f}°")  # Exemple pour la première colonne (à adapter si nécessaire)
+    # for i, beta in enumerate(beta_PIT):
+    #     plt.plot(freq_BEM, [row[0] for row in Coef_PIT[i]], 'o-', label=f"PIT_beta = {beta:.2f}°")  # Exemple pour la première colonne (à adapter si nécessaire)
+    for i in range(Nombre[0],Nombre[1]) :
+        plt.plot(freq_BEM, Coef_BEM_abs[i][:, 0], 'o-', label=f"BEM_beta = {beta_BEM[i]:.2f}°")  # Exemple pour la première colonne (à adapter si nécessaire)
+        plt.plot(freq_BEM, [row[0] for row in Coef_PIT[i]], 's-', label=f"PIT_beta = {beta_PIT[i]:.2f}°")  # Exemple pour la première colonne (à adapter si nécessaire)
+
+    plt.legend()
+    plt.grid(True)
+    plt.savefig(f"Fex_abs_N{Nombre[0]}-{Nombre[1]}.png", dpi=300)
+    # plt.show()
+    return
+
+GRAPHS = False
+if GRAPHS :
+    Trace_RAD(CA_BEM, CA_PIT, "Damping_c2", "Nw=20, Nbeta=11, dof=1, Ndir=5, d=1")
+    Trace_RAD(CM_BEM, CM_PIT, "Added_Mass_c2", "Nw=20, Nbeta=11, dof=1, Ndir=5, d=1")
+    Trace_Fex(Fex_BEM, Fex_PIT, [3, 5], "Nw=20, Nbeta=11, dof=1, Ndir=5, d=1")
+
+

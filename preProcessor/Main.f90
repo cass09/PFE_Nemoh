@@ -74,12 +74,16 @@
     INTEGER :: Switch_SourceDistr
 !   Other local variables
     INTEGER :: M
-    INTEGER :: i,j,c,k,IdBody,IdMode,indsum
+    INTEGER :: i,j,c,k,IdBody,IdMode,indsum, num_Body
 !   CML - MODIF
 !   Interaction Theory - Cylinder envelop
     INTEGER :: Switch_Cylsurface
     INTEGER :: cyldTheta, cyldZ
-    REAL :: cylR, cylZ
+    REAL    :: cylR, cylZ
+    INTEGER :: run_IT, run_BEM
+    INTEGER :: IT_Nb, IT_NDir
+    REAL    :: DirMin,DirMax
+    REAL,DIMENSION(:,:), ALLOCATABLE :: IT_coord
 !
 !   --- Initialize and read input datas ----------------------------------------------------------------------------------------
 !
@@ -104,10 +108,23 @@
     Lx                =InpNEMOHCAL%OptOUTPUT%Freesurface%Lx
     Ly                =InpNEMOHCAL%OptOUTPUT%Freesurface%Ly
     Switch_SourceDistr=InpNEMOHCAL%OptOUTPUT%Switch_SourceDistr
-    Switch_Cylsurface =InpNEMOHCAL%OptOUTPUT%Cylsurface%Switch
-    cylR              =InpNEMOHCAL%OptOUTPUT%Cylsurface%cylR
-    cyldTheta         =InpNEMOHCAL%OptOUTPUT%Cylsurface%cyldTheta
-    cyldZ             =InpNEMOHCAL%OptOUTPUT%Cylsurface%cyldZ
+    run_IT=InpNEMOHCAL%IntTheory%run_IT
+    IF (run_IT .EQ. 1) THEN 
+        Switch_Cylsurface =InpNEMOHCAL%IntTheory%Cylsurface%Switch
+        cylR              =InpNEMOHCAL%IntTheory%Cylsurface%cylR
+        cyldTheta         =InpNEMOHCAL%IntTheory%Cylsurface%cyldTheta
+        cyldZ             =InpNEMOHCAL%IntTheory%Cylsurface%cyldZ
+        run_BEM=InpNEMOHCAL%IntTheory%run_BEM
+        IT_Nb=InpNEMOHCAL%IntTheory%Nb
+        IT_NDir=InpNEMOHCAL%IntTheory%NDir
+        DirMin=InpNEMOHCAL%IntTheory%DirMin
+        DirMax=InpNEMOHCAL%IntTheory%DirMax
+        ALLOCATE(IT_coord(IT_Nb, 2))
+        IT_coord=InpNEMOHCAL%IntTheory%Bcoord
+    ELSE 
+        Switch_Cylsurface=0
+    END IF 
+
 ! ---------------------------------------------------------------------------
 !   Print summary of calculation case
     WRITE(*,*) ' '
@@ -191,6 +208,15 @@
     CLOSE(11)
     DEALLOCATE(PRESSURE,NVEL,FNDS)
 !
+    IF (run_IT .EQ. 1 .AND. InpNEMOHCAL%Nbodies .NE. 1) THEN 
+        run_IT = 0
+        WRITE(*,*) "BEM resolution must be on only ONE body to apply Interaction Theory"
+    END IF
+
+    IF (run_IT .EQ. 1 .AND. Switch_Cylsurface .NE. 1) THEN 
+        run_IT = 0
+        WRITE(*,*) "Cylindrical mesh necessary to apply Interaction Theory"
+    END IF
 !   --- Save body conditions ----------------------------------------------------------------------------------------
 !
     OPEN(11,FILE=TRIM(ID%ID)//'/Normalvelocities.dat')
@@ -204,6 +230,7 @@
     WRITE(11,*) ((Switch_Kochin,j=1,Nbeta+Nradiation),i=1,Nw)
     WRITE(11,*) ((Switch_SourceDistr,j=1,Nbeta+Nradiation),i=1,Nw)
     WRITE(11,*) ((Switch_Cylsurface,j=1,Nbeta+Nradiation),i=1,Nw)
+    WRITE(11,*) run_IT, run_BEM
     DO c=1,Mesh%Npanels*2**Mesh%Isym
         WRITE(11,*) (REAL(NormalVelocity(c,j)),IMAG(NormalVelocity(c,j)),j=1,(Nbeta+Nradiation)*Nw)
     END DO
@@ -268,25 +295,47 @@
 !
 ! --- Generate Cylindrical control surf mesh file ----------------------------------------------------------------------
 !   CML
-    OPEN(11,FILE=ID%ID(1:ID%lID)//'/mesh/Cylsurface.dat')
-    WRITE(11,*) cyldTheta*cyldZ,cyldTheta*(cyldZ-1) 
-    DO i=1,cyldZ
-        DO j=1,cyldTheta
-            IF (cyldZ .EQ. 1) THEN
-                cylZ = 0
-            ELSE
-                cylZ = -Environment%Depth*(1.-COS(PI/2.*(i-1.)/(cyldZ-1.)))
-            END IF
-            WRITE(11,'(3(X,E14.6))') cylR*COS(2.*PI*(j-1)/cyldTheta),cylR*SIN(2.*PI*(j-1)/cyldTheta),cylZ
+    IF (Switch_Cylsurface .EQ. 1) THEN 
+        OPEN(11,FILE=ID%ID(1:ID%lID)//'/mesh/Cylsurface.dat')
+        WRITE(11,*) cyldTheta*cyldZ,cyldTheta*(cyldZ-1) 
+        DO i=1,cyldZ
+            DO j=1,cyldTheta
+                IF (cyldZ .EQ. 1) THEN
+                    cylZ = 0
+                ELSE
+                    cylZ = -Environment%Depth*(1.-COS(PI/2.*(i-1.)/(cyldZ-1.)))
+                END IF
+                WRITE(11,'(3(X,E14.6))') cylR*COS(2.*PI*(j-1)/cyldTheta),cylR*SIN(2.*PI*(j-1)/cyldTheta),cylZ
+            END DO
+        END DO  
+        DO i=1,cyldZ-1
+            DO j=1,cyldTheta-1
+                WRITE(11,'(4(X,I7))') j+(i-1)*cyldTheta,j+i*cyldTheta,j+i*cyldTheta+1,j+(i-1)*cyldTheta+1
+            END DO
+            WRITE(11,'(4(X,I7))') i*cyldTheta,(i+1)*cyldTheta,i*cyldTheta+1,(i-1)*cyldTheta+1
         END DO
-    END DO  
-    DO i=1,cyldZ-1
-        DO j=1,cyldTheta-1
-            WRITE(11,'(4(X,I7))') j+(i-1)*cyldTheta,j+i*cyldTheta,j+i*cyldTheta+1,j+(i-1)*cyldTheta+1
+        CLOSE(11)
+    END IF 
+!
+!   CML MODIF : transmission from preProcessor to Solver
+!   --- Save Interaction Theory Inputs ----------------------------------------------------------------------------------------------
+!   
+    IF (run_IT .EQ. 1) THEN
+        WRITE(*,*) "--------- Interaction Theory activated ------------"
+        OPEN(12,FILE=TRIM(ID%ID)//'/input_IT.dat')
+        WRITE(12,*) run_IT
+        WRITE(12,*) run_BEM
+        WRITE(12,*) IT_Nb
+        DO num_Body=1,IT_Nb
+            WRITE(12,*) IT_coord(num_Body, :)
         END DO
-        WRITE(11,'(4(X,I7))') i*cyldTheta,(i+1)*cyldTheta,i*cyldTheta+1,(i-1)*cyldTheta+1
-    END DO
-    CLOSE(11)
+        WRITE(12,*) IT_NDir, DirMin, DirMax
+        WRITE(12,*) cylR, cyldTheta, cyldZ
+        CLOSE(12)
+    ELSE 
+        WRITE(*,*) "--------- Interaction Theory NOT activated ------------"
+    END IF
+    
 ! 
 !   --- Save index of cases ----------------------------------------------------------------------------------------------
 !

@@ -44,6 +44,7 @@ PROGRAM Main
   ! Resolution
   USE SOLVE_BEM_DIRECT,     ONLY: SOLVE_POTENTIAL_DIRECT
   USE SOLVE_INTERACTION_THEORY,     ONLY: SOLVE_POTENTIAL_MATRIX
+
   ! Post processing and output
   USE OUTPUT,               ONLY: WRITE_DATA_ON_MESH,WRITE_SOURCES
   USE FORCES,               ONLY: COMPUTE_AND_WRITE_FORCES
@@ -71,7 +72,7 @@ PROGRAM Main
   CHARACTER(LEN=1000)                :: LogTextToBeWritten
   COMPLEX, DIMENSION(:), ALLOCATABLE :: ETAc 
   COMPLEX, DIMENSION(:,:), ALLOCATABLE :: Np_Potential          ! Computed potential
-  LOGICAL :: check_IT
+  LOGICAL :: run_IT
 
   ! Initialization ---------------------------------------------------------------------
 
@@ -94,10 +95,11 @@ PROGRAM Main
     Mesh%Npanels*2**Mesh%Isym,        &
     TRIM(wd)//'/Normalvelocities.dat' &
     )
-
-  CALL READ_CYLSURFACE_PARAMETERS(TRIM(wd)//'/mesh/Cylsurface.dat', MeshCyl)
-  ALLOCATE(Np_Potential(BodyConditions%Nproblems, MeshCyl%Npoints))
-  ALLOCATE(ETAc(MeshCyl%Npoints))
+  IF (BodyConditions%run_IT==1) THEN
+    CALL READ_CYLSURFACE_PARAMETERS(TRIM(wd)//'/mesh/Cylsurface.dat', MeshCyl)
+    ALLOCATE(Np_Potential(BodyConditions%Nproblems, MeshCyl%Npoints))
+    ALLOCATE(ETAc(MeshCyl%Npoints))
+  END IF
 
   CALL ReadTEnvironment(Env, file=TRIM(wd)//'/Nemoh.cal')
 
@@ -201,9 +203,9 @@ PROGRAM Main
       Np_Potential(i_problem, :) = ETAc(:)*Env%G/(II*omega)
     END IF
   END DO
-  check_IT = .true.
-  IF (check_IT) THEN
-    CALL SOLVE_POTENTIAL_MATRIX(VFace, Mesh, Env,SolverOpt, BodyConditions%Nproblems, Np_Potential, BodyConditions%Switch_type, wd)
+
+  IF (BodyConditions%run_IT== 1) THEN
+    CALL SOLVE_POTENTIAL_MATRIX(VFace, Mesh, Env,SolverOpt, wd)
   END IF
 
   CALL END_RECORD_TIME(tcpu_start,trim(wd)//'/logfile.txt')
@@ -211,7 +213,7 @@ PROGRAM Main
   ! Finalize ---------------------------------------------------------------------------
   IF (MeshCyl%Npoints.GT.0) CALL DeleteTMesh(MeshCyl)
   DEALLOCATE(ZIGB, ZIGS, Potential,S,V,Vinv)
-  DEALLOCATE(Np_Potential, ETAc)
+  IF (ALLOCATED(Np_Potential)) DEALLOCATE(Np_Potential, ETAc)
   DEALLOCATE(IGreen%FSP1,IGreen%FSM1,IGreen%VSP1,IGREEN%VSM1)
   DEALLOCATE(IGreen%FSP1_INF,IGreen%FSM1_INF,IGreen%VSP1_INF,IGREEN%VSM1_INF)
   DEALLOCATE(IGreen%XR,IGreen%XZ)

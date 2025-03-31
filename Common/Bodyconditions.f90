@@ -34,6 +34,7 @@
         INTEGER,DIMENSION(:),ALLOCATABLE :: Switch_SourceDistr
         INTEGER,DIMENSION(:),ALLOCATABLE :: Switch_Type
         INTEGER,DIMENSION(:),ALLOCATABLE :: Switch_Cylsurface
+        INTEGER ::run_IT, run_BEM
     END TYPE TBodyConditions
 !   CML - Ajout Switch_Cylsurface
     CONTAINS
@@ -70,6 +71,8 @@
                 BodyConditionsTarget%NormalVelocity(k,i)=BodyConditionsSource%NormalVelocity(k,i)
             END DO
         END DO
+        BodyConditionsTarget%run_IT=BodyConditionsSource%run_IT
+        BodyConditionsTarget%run_BEM=BodyConditionsSource%run_BEM
         END SUBROUTINE CopyTBodyConditions
 !       ---
         SUBROUTINE ReadTBodyConditions(BodyConditions,Npanels,namefile)
@@ -90,6 +93,7 @@
         READ(10,*) (BodyConditions%Switch_Kochin(i),i=1,Nproblems)
         READ(10,*) (BodyConditions%Switch_SourceDistr(i),i=1,Nproblems)
         READ(10,*) (BodyConditions%Switch_Cylsurface(i),i=1,Nproblems)
+        READ(10,*) BodyConditions%run_IT, BodyConditions%run_BEM
         DO k=1,Npanels
             READ(10,*) (RBC(i),IBC(i),i=1,Nproblems)
             DO i=1,Nproblems

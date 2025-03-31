@@ -69,7 +69,6 @@
               TYPE(TIRF)         :: IRF
               TYPE(TKochin)      :: Kochin
               TYPE(TFreesurface) :: Freesurface
-              TYPE(TCylsurface) :: Cylsurface
           END TYPE TOptOutput
 
           TYPE TBCase
@@ -103,6 +102,16 @@
               INTEGER  :: switch_qtfhasfs   !Louthasfs
           END TYPE Tqtfinput
 
+          TYPE TInteractionTheory       ! CML modif du fichier Nemoh.cal
+              INTEGER                          :: run_IT
+              INTEGER                          :: run_BEM
+              INTEGER                          :: Nb
+              INTEGER                          :: NDir
+              REAL                             :: DirMin,DirMax
+              REAL,DIMENSION(:,:), ALLOCATABLE :: Bcoord(:,:)
+              TYPE(TCylsurface)                :: Cylsurface
+          END TYPE TInteractionTheory
+
           TYPE TNemCal
               TYPE(Tenvironment)           :: Env
               INTEGER                      :: Nbodies,Nradtot,Nintegtot
@@ -110,6 +119,7 @@
               TYPE(Twaveinput)             :: waveinput
               TYPE(TOptOutput)             :: OptOUTPUT
               TYPE(Tqtfinput)              :: qtfinput
+              TYPE(TInteractionTheory)     :: IntTheory
           END TYPE TNemCal
 
         CONTAINS
@@ -198,16 +208,27 @@
 
              READ(ufile,*) InpNEMOHCAL%OptOUTPUT%Switch_RAO
              READ(ufile,*) InpNEMOHCAL%OptOUTPUT%FreqType
-
-             READ(ufile,*) InpNEMOHCAL%OptOUTPUT%Cylsurface%cylR,       &
-                           InpNEMOHCAL%OptOUTPUT%Cylsurface%cyldTheta,       &
-                           InpNEMOHCAL%OptOUTPUT%Cylsurface%cyldZ
-             IF (InpNEMOHCAL%OptOUTPUT%Cylsurface%cylR.GT.0 ) THEN
-                           InpNEMOHCAL%OptOUTPUT%Cylsurface%Switch=1
-             ELSE
-                           InpNEMOHCAL%OptOUTPUT%Cylsurface%Switch=0
-             ENDIF
-
+                ! CML modif fichier Nemoh.cal
+             READ(ufile,*)! ---Interaction Theory----
+             READ(ufile,*) InpNEMOHCAL%IntTheory%run_IT
+             IF (InpNEMOHCAL%IntTheory%run_IT==1) THEN 
+                READ(ufile,*) InpNEMOHCAL%IntTheory%run_BEM
+                READ(ufile,*) InpNEMOHCAL%IntTheory%Cylsurface%cylR,       &
+                            InpNEMOHCAL%IntTheory%Cylsurface%cyldTheta,       &
+                            InpNEMOHCAL%IntTheory%Cylsurface%cyldZ
+                IF (InpNEMOHCAL%IntTheory%Cylsurface%cylR.GT.0 ) THEN
+                            InpNEMOHCAL%IntTheory%Cylsurface%Switch=1
+                ELSE
+                            InpNEMOHCAL%IntTheory%Cylsurface%Switch=0
+                ENDIF
+                READ(ufile,*) InpNEMOHCAL%IntTheory%Nb
+                ALLOCATE(InpNEMOHCAL%IntTheory%Bcoord(InpNEMOHCAL%IntTheory%Nb, 2))
+                DO I=1,InpNEMOHCAL%IntTheory%Nb 
+                    READ(ufile,*) InpNEMOHCAL%IntTheory%Bcoord(I, :)
+                END DO
+                READ(ufile,*) InpNEMOHCAL%IntTheory%NDir, InpNEMOHCAL%IntTheory%DirMin, &
+                InpNEMOHCAL%IntTheory%DirMax
+             END IF 
              READ(ufile,*)! ---QTF----
              READ(ufile,*)InpNEMOHCAL%OptOUTPUT%Switch_SourceDistr
              IF (InpNEMOHCAL%OptOUTPUT%Switch_SourceDistr==1) THEN
