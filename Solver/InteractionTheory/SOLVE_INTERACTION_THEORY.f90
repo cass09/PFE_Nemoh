@@ -39,8 +39,6 @@
 MODULE SOLVE_INTERACTION_THEORY
 
   USE Constants
-  USE MMesh,              ONLY: TMesh
-  USE MFace,              ONLY: TVFace
   USE MEnvironment,       ONLY: TEnvironment
   USE M_SOLVER,           ONLY:GAUSSZ,LU_INVERS_MATRIX,GMRES_SOLVER, LU_SOLVER, &
                                ID_GAUSS,ID_GMRES,TSolver
@@ -67,8 +65,9 @@ MODULE SOLVE_INTERACTION_THEORY
   END TYPE TInteractionTheory
 
   PRIVATE :: ReadTInteractionTheory, CloseIT, &
-   ReadIndex, ReadParamIso, ReadTwoPotential, CalculMatrix, SolveITproblem, &
-  OneToTwoPotential, CalculParamIso
+   ReadIndex, ReadParamIso, ReadTwoPotential, CalculMatrix, SolveITproblem
+  ! OneToTwoPotential, CalculParamIso
+  
   ! Those variables will be conserved between calls of the subroutine.
   INTEGER :: Nw, Nbeta_iso, Nrad, Nint, Ndir, Mtronc
   REAL, DIMENSION(:), ALLOCATABLE              :: omega
@@ -76,11 +75,9 @@ MODULE SOLVE_INTERACTION_THEORY
 CONTAINS
 
   SUBROUTINE SOLVE_POTENTIAL_MATRIX             &
-  (VFace, Mesh, Env,SolverOpt, wd)
+  (Env,SolverOpt, wd)
   IMPLICIT NONE
 
-  TYPE(TVFace),                         INTENT(IN) :: VFace
-  TYPE(TMesh),                          INTENT(IN) :: Mesh
   TYPE(TEnvironment),                   INTENT(IN) :: Env
   TYPE(TSolver),                        INTENT(IN) :: SolverOpt
   ! COMPLEX, DIMENSION(Nproblems, Mesh%Npoints),  INTENT(IN) :: Potential          ! Computed potential
@@ -88,9 +85,9 @@ CONTAINS
   ! INTEGER,DIMENSION(Nproblems),         INTENT(IN) :: Switch_Type
   CHARACTER(LEN=*),                     INTENT(IN) :: wd
 
-  TYPE(TInteractionTheory)      :: ParamsIT
-  REAL, DIMENSION(:), ALLOCATABLE              :: beta_iso
-  REAL,DIMENSION(:,:,:), ALLOCATABLE :: Madd_iso, Crad_iso
+  TYPE(TInteractionTheory)              :: ParamsIT
+  REAL, DIMENSION(:),       ALLOCATABLE :: beta_iso
+  REAL,DIMENSION(:,:,:),    ALLOCATABLE :: Madd_iso, Crad_iso
   COMPLEX,DIMENSION(:,:,:), ALLOCATABLE :: Fex_iso
   
   WRITE(*,*) "-------------------Début"
@@ -177,8 +174,15 @@ CONTAINS
   CLOSE(15)
   ALLOCATE(InputIT%wave_dir(Ndir))
   DO j=1,Ndir
-    InputIT%wave_dir(j)=(dir_min+(dir_max-dir_min)*(j-1)/(Ndir-1))*PI/180.
+    IF (Ndir > 1) THEN
+        InputIT%wave_dir(j) = (dir_min + (dir_max - dir_min) * (j - 1) / (Ndir - 1)) * PI / 180.
+    ELSE
+        InputIT%wave_dir(j) = dir_min * PI / 180.  
+    END IF
   END DO
+  ALLOCATE(InputIT%Madd(Nw, InputIT%Nb*Nrad, InputIT%Nb*Nint))
+  ALLOCATE(InputIT%Crad(Nw, InputIT%Nb*Nrad, InputIT%Nb*Nint))
+  ALLOCATE(InputIT%Fex(Nw, Ndir, InputIT%Nb*Nint))
   END SUBROUTINE ReadTInteractionTheory
 
 
@@ -210,19 +214,19 @@ CONTAINS
   END SUBROUTINE ReadIndex
 
 
-  SUBROUTINE CalculParamIso   &
-  (Env, PHI_S, PHI_R)
-  IMPLICIT NONE
+  ! SUBROUTINE CalculParamIso   &
+  ! (Env, PHI_S, PHI_R)
+  ! IMPLICIT NONE
 
-  TYPE(TEnvironment),          INTENT(IN) :: Env
-  COMPLEX, DIMENSION(:,:,:),   INTENT(IN) :: PHI_S, PHI_R  
+  ! TYPE(TEnvironment),          INTENT(IN) :: Env
+  ! COMPLEX, DIMENSION(:,:,:),   INTENT(IN) :: PHI_S, PHI_R  
 
-  ! calcul momentum avec rho, phi, normal   
-  ! calcul Fex, Madd, Crad avec omega et momentum
-  ! + dimensions
-  ! Tout ok sauf normal à lire dans fichier mais boucle Nproblème
+  ! ! calcul momentum avec rho, phi, normal   
+  ! ! calcul Fex, Madd, Crad avec omega et momentum
+  ! ! + dimensions
+  ! ! Tout ok sauf normal à lire dans fichier mais boucle Nproblème
 
-  END SUBROUTINE CalculParamIso
+  ! END SUBROUTINE CalculParamIso
 
   SUBROUTINE ReadParamIso   &
   (Fex, Madd, Crad, wd)
@@ -278,49 +282,46 @@ CONTAINS
   DEALLOCATE(line)
   END SUBROUTINE ReadParamIso
 
-  SUBROUTINE OneToTwoPotential             &
-  (Nmesh, Potential, Switch_type, PHI_S, PHI_R)
-  IMPLICIT NONE
-  ! Input/output
-  INTEGER,                                        INTENT(IN)  :: Nmesh
-  COMPLEX, DIMENSION(Nw*(Nbeta_iso+Nrad), Nmesh), INTENT(IN)  :: Potential          ! Computed potential
-  INTEGER,DIMENSION(Nw*(Nbeta_iso+Nrad)),         INTENT(IN)  :: Switch_Type
-  COMPLEX, DIMENSION(Nw,Nbeta_iso,Nmesh),       INTENT(INOUT) :: PHI_S
-  COMPLEX, DIMENSION(Nw,Nrad,Nmesh),            INTENT(INOUT) :: PHI_R
+  ! SUBROUTINE OneToTwoPotential             &
+  ! (Nmesh, Potential, Switch_type, PHI_S, PHI_R)
+  ! IMPLICIT NONE
+  ! ! Input/output
+  ! INTEGER,                                        INTENT(IN)  :: Nmesh
+  ! COMPLEX, DIMENSION(Nw*(Nbeta_iso+Nrad), Nmesh), INTENT(IN)  :: Potential          ! Computed potential
+  ! INTEGER,DIMENSION(Nw*(Nbeta_iso+Nrad)),         INTENT(IN)  :: Switch_Type
+  ! COMPLEX, DIMENSION(Nw,Nbeta_iso,Nmesh),       INTENT(INOUT) :: PHI_S
+  ! COMPLEX, DIMENSION(Nw,Nrad,Nmesh),            INTENT(INOUT) :: PHI_R
 
+  ! COMPLEX, DIMENSION(:,:), ALLOCATABLE         :: PHI_Sw, PHI_Rw  
+  ! INTEGER :: i, j, indice_S, indice_R
 
-  COMPLEX, DIMENSION(:,:), ALLOCATABLE         :: PHI_Sw, PHI_Rw  
-  INTEGER :: i, j, indice_S, indice_R
-
-  ALLOCATE(PHI_Rw(Nw*Nrad, Nmesh), PHI_Sw(Nw*Nbeta_iso, Nmesh))
-  indice_S = 1
-  indice_R = 1
-  DO i=1, Nw*(Nbeta_iso+Nrad)
-    IF (switch_type(i) == DIFFRACTION_PROBLEM) THEN
-          PHI_Sw(indice_S,:) = Potential(i,:) 
-          indice_S = indice_S+1
-    ELSE IF (switch_type(i) == RADIATION_PROBLEM) THEN
-          PHI_Rw(indice_R,:) = Potential(i,:)  
-          indice_R=indice_R+1      
-    END IF
-  END DO
-  indice_S = 1
-  indice_R = 1
-  DO i=1,Nw  ! boucle à étendre jusqu'à la fin ??
-      DO j=1,Nbeta_iso
-        PHI_S(i, j,:) = PHI_Sw(indice_S,:)
-        indice_S = indice_S+1
-      END DO
-      DO j=1,Nrad
-        PHI_R(i,j,:) = PHI_Rw(indice_R,:)
-        indice_R=indice_R+1 
-      END DO
-  END DO
-  DEALLOCATE(PHI_Rw, PHI_Sw)
-  ! phi_S et phi_R OK (Nw, N_, Npanels)               
-
-
-  END SUBROUTINE OneToTwoPotential
+  ! ALLOCATE(PHI_Rw(Nw*Nrad, Nmesh), PHI_Sw(Nw*Nbeta_iso, Nmesh))
+  ! indice_S = 1
+  ! indice_R = 1
+  ! DO i=1, Nw*(Nbeta_iso+Nrad)
+  !   IF (switch_type(i) == DIFFRACTION_PROBLEM) THEN
+  !         PHI_Sw(indice_S,:) = Potential(i,:) 
+  !         indice_S = indice_S+1
+  !   ELSE IF (switch_type(i) == RADIATION_PROBLEM) THEN
+  !         PHI_Rw(indice_R,:) = Potential(i,:)  
+  !         indice_R=indice_R+1      
+  !   END IF
+  ! END DO
+  ! indice_S = 1
+  ! indice_R = 1
+  ! DO i=1,Nw  ! boucle à étendre jusqu'à la fin ??
+  !     DO j=1,Nbeta_iso
+  !       PHI_S(i, j,:) = PHI_Sw(indice_S,:)
+  !       indice_S = indice_S+1
+  !     END DO
+  !     DO j=1,Nrad
+  !       PHI_R(i,j,:) = PHI_Rw(indice_R,:)
+  !       indice_R=indice_R+1 
+  !     END DO
+  ! END DO
+  ! DEALLOCATE(PHI_Rw, PHI_Sw)
+  ! ! phi_S et phi_R OK (Nw, N_, Npanels)               
+  ! END SUBROUTINE OneToTwoPotential
 
   SUBROUTINE ReadTwoPotential             &
   (PHI_S, PHI_R, Mcyl, G, wd)
@@ -397,7 +398,8 @@ CONTAINS
   COMPLEX, DIMENSION(Nw, Nrad, 2*Mtronc+1)       :: A_RAD
   COMPLEX, DIMENSION(Nbeta_iso, 2*Mtronc+1)      :: A_SCAT, A_I
   INTEGER :: i, m, i_m
-  REAL    :: Hankel_2, coef, k
+  REAL    :: coef, k
+  COMPLEX :: Hankel_2
   COMPLEX, DIMENSION(:), ALLOCATABLE :: int_R, int_S
 
   CALL ReadTwoPotential(PHI_S, PHI_R, ParamsIT%Mcyl, Env%G, wd)
@@ -413,18 +415,18 @@ CONTAINS
 
     ! calcul coefficient a
     coef=2*COSH(k*Env%Depth)/(Env%Depth*(1+SINH(2*k*Env%Depth)/(2*k*Env%Depth)))
-    coef=coef*(-omega(i)/(2*PI*Env%G))
+    coef=coef*(-omega(i)/(2*PI*Env%G)) ! signe opposé sur python
     DO i_m=1, 2*Mtronc+1
       m=i_m-Mtronc-1
       ! fonction de Hankel d'ordre 2
       ! Hm(2)= -iJm (exp(i*pi*m)-(-1)^m)/sin(pi*m) car J-m = (-1)^m Jm
       Hankel_2=-II*fun_BESSJ(m, k*ParamsIT%Mcyl%R)*(EXP(II*PI*m)-(-1)**m)/SIN(PI*m)
-      int_R=CALCUL_INT_A(i_m, k, Env%Depth, PHI_R(i,:,:,:), ParamsIT%Mcyl)
-      int_S=CALCUL_INT_A(i_m, k, Env%Depth, PHI_S(i,:,:,:), ParamsIT%Mcyl)
+      int_R=CALCUL_INT_A(m, k, Env%Depth, PHI_R(i,:,:,:), ParamsIT%Mcyl)
+      int_S=CALCUL_INT_A(m, k, Env%Depth, PHI_S(i,:,:,:), ParamsIT%Mcyl)
       A_RAD(i,:,i_m)=II*coef*int_R(:)/Hankel_2
       A_SCAT(:,i_m)=II*coef*int_S(:)/Hankel_2  
       A_I(:,i_m)=EXP(-II*m*(beta_iso(:)+PI/2)) ! theory
-      ! A_I(:,i_m)=EXP(II*m*(-beta_iso(:)+PI/2)) ! convention Nemoh python
+      ! A_I(:,i_m)=EXP(II*m*(-beta_iso(:)+PI/2)) ! convention Nemoh python -> le conjugué
     END DO
     
     ! Nmode = 2*Mtruc+1     = Nbeta_iso si impair !!
@@ -438,13 +440,13 @@ CONTAINS
 
     ! - calcul a_s_scat à partir du flux phi_scat 
     ! - calcul a_s_rad à partir du flux phi_rad
-    ! Besoin des fonctions de Bessel
+    ! Besoin des fonctions de Bessel  -> PROBLEME !!
     ! - calcul a_i
     ! - Resolution a_i * D = a_s_scat 
     ! - Resolution a_i * G = fex
     ! Besoin solveur LU, GMRES 
     ! - troncature = modes pour les directions des vagues avec Hm
-    ! - réduction pour elever modes non significatifs
+    ! - réduction pour enlever modes non significatifs
 
   END SUBROUTINE CalculMatrix
 
@@ -506,7 +508,6 @@ CONTAINS
   WRITE(*,*) "-------- Solve IT"
   ! 3 - calcul Madd, Crad, Fex pour l'ensemble du système (inspiration code python)
           ! Attention : transposée ou pas ??
-          ! recup params sur la ferme
           ! - calcul matrice transformation T
           ! - troncature ???
           ! Besoin des fonctions de Bessel

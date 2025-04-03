@@ -102,27 +102,30 @@ CONTAINS
   !-------------------------------------------
   SUBROUTINE COMPUTE_AND_WRITE_CYL_SURFACE  &
     ! Main subroutine of the module. Called in NEMOH.f90.
-    ( IGreen, VFace,                 &
+    ( parameters_file, IGreen, VFace,                 &
       Mesh, Env, omega, wavenumber, ZIGB, ZIGS,        &
-      output_file, MeshCyl, ETA               &
+      output_file               &
       )
 
-    CHARACTER(LEN=*),                 INTENT(IN) :: output_file
-    TYPE(TMesh),                      INTENT(IN) :: Mesh, MeshCyl
+    CHARACTER(LEN=*),                 INTENT(IN) :: parameters_file, output_file
+    TYPE(TMesh),                      INTENT(IN) :: Mesh
     TYPE(TVFace),                     INTENT(IN) :: VFace
     TYPE(TEnvironment),               INTENT(IN) :: Env
     REAL,                             INTENT(IN) :: omega, wavenumber
     COMPLEX, DIMENSION(Mesh%NPanels), INTENT(IN) :: ZIGB, ZIGS ! Sources
     TYPE(TGREEN),                     INTENT(IN) :: IGreen
-    COMPLEX, DIMENSION(MeshCyl%Npoints),  INTENT(OUT) :: ETA
+
 
     ! Local variables
+    TYPE(TMesh) :: MeshCyl
+    COMPLEX, DIMENSION(:), ALLOCATABLE :: ETA
     INTEGER :: j
     COMPLEX :: PHI
-    
+
+    CALL READ_CYLSURFACE_PARAMETERS(parameters_file, MeshCyl)
+    ALLOCATE(ETA(MeshCyl%Npoints))
 
     DO j = 1, MeshCyl%Npoints
-
       CALL COMPUTE_POTENTIAL_AT_POINT             &
       !==============================
       ( Mesh, Env, omega, wavenumber, ZIGB, ZIGS, &
@@ -134,10 +137,9 @@ CONTAINS
       ! Get elevation ETA from potential PHI
       ETA(j) = II*omega/Env%G*PHI
     END DO
-
     CALL WRITE_FS(output_file, ETA, MeshCyl)
 
-    
+    IF (MeshCyl%Npoints.GT.0) CALL DeleteTMesh(MeshCyl)
 
     ! DEALLOCATE(ETA)
 
@@ -232,20 +234,18 @@ CONTAINS
     COMPLEX, DIMENSION(3) :: VSP, VSM
 
     PHI = 0.0
-
     DO J = 1, Mesh%NPanels
 
       ! Compute the Greem function coefficients between the point and the face of index J.
       ! Compute also its gradient although it is not used.
       ! Values could be stored for more efficiency as in SOLVE_BEM.
-
       call vav(0, (/xc, yc, zc/), j,VFace, mesh, env%depth,IGREEN%EPS_ZMIN, fsp, fsm, vsxp, vsxm)
       IF ((Env%depth == INFINITE_DEPTH) .OR. (wavenumber*Env%depth >= 20)) THEN
         CALL VNSINFD(0,wavenumber, (/XC, YC, ZC/), J, VFace, Mesh, IGreen, SP, SM, VSP, VSM)
       ELSE
         CALL VNSFD  (0,wavenumber, (/XC, YC, ZC/), J, VFace, Mesh, IGreen, Env%depth, SP, SM, VSP, VSM)
       ENDIF
-
+      
       ! Compute potential from sources and Green function.
       IF (Mesh%Isym == NO_Y_SYMMETRY) THEN
         PHI = PHI + (SP+FSP)*ZIGB(J)
@@ -278,7 +278,7 @@ CONTAINS
     END IF
 
     DO i = 1, Mesh%Npoints
-      WRITE(u, '(6(X, E14.7))') Mesh%X(1, i), Mesh%X(2, i), Mesh%X(3, i), ABS(eta(i)), ATAN2(IMAG(eta(i)), REAL(eta(I))), REAL(eta(i)), IMAG(eta(i))
+      WRITE(u, '(7(X, E14.7))') Mesh%X(1, i), Mesh%X(2, i), Mesh%X(3, i), ABS(eta(i)), ATAN2(IMAG(eta(i)), REAL(eta(I))), REAL(eta(i)), IMAG(eta(i))
     END DO
 
     IF (output_format == TECPLOT_OUTPUT) THEN
