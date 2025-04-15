@@ -175,6 +175,7 @@
         REAL,DIMENSION(Results%Nw)::freqVar
         CHARACTER(LEN=*) :: namedir
         CHARACTER(LEN=23) :: FreqVar_text
+        CHARACTER(LEN=30) :: fmt
         INTEGER :: i,j,k,l
         REAL :: PI
         PI=4.*ATAN(1.0)
@@ -233,13 +234,16 @@
 
 !       Added by Christophe Peyrard
 !       Save hydrodynamic database with Aquaplus format
+
+        ! Construction du format : 12(X,E13.6) → Nradiation(X,E13.6)
+        WRITE(fmt, '(A,I0,A)') '(', Results%Nintegration, '(X,E13.6))'
         OPEN(10,FILE=namedir//'/CA.dat')
         WRITE(10,'(A,I5)') 'Nb de frequency : ',Results%Nw, 'Nb dof :', Results%Nradiation, 'Nb forces : ', Results%Nintegration
         DO l=1,Results%Nw
           WRITE(10,'(F7.4)') Results%w(l)
           DO j=1,Results%Nradiation
-            ! CML format modifié de 6 à 12 pour avoir 12 colonnes =Nint
-              WRITE(10,'(12(X,E13.6))') (Results%RadiationDamping(l,j,k),k=1,Results%Nintegration)
+            ! CML format modifié pour avoir Nint colonnes 
+              WRITE(10,fmt) (Results%RadiationDamping(l,j,k),k=1,Results%Nintegration)
           END DO
         END DO
         CLOSE(10)
@@ -249,7 +253,7 @@
         DO l=1,Results%Nw
           WRITE(10,'(F7.4)') Results%w(l)
           DO j=1,Results%Nradiation
-              WRITE(10,'(12(X,E13.6))') (Results%AddedMass(l,j,k),k=1,Results%Nintegration)
+              WRITE(10,fmt) (Results%AddedMass(l,j,k),k=1,Results%Nintegration)
           END DO
         END DO
         CLOSE(10)

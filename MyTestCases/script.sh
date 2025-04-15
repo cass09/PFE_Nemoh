@@ -8,7 +8,7 @@ fi
 # echo "Mise en place"
 # Définir les chemins des dossiers source et destination
 
-# cp -r "/home/cassandra/Documents/PFE_MOREnergy/Nemoh_myVersion/BEM_Nemoh_matlab/$nom_dossier" "../MyTestCases"
+cp -r "/home/cassandra/Documents/PFE_MOREnergy/Nemoh_myVersion/BEM_Nemoh_matlab/$nom_dossier" "../MyTestCases"
 
 cp -r "RUN"/* "$nom_dossier"  
 
@@ -29,4 +29,8 @@ if ! grep -q "add_subdirectory($nom_dossier)" CMakeLists.txt; then
     echo "add_subdirectory($nom_dossier)" >> CMakeLists.txt
 fi
 
-echo "-> run_$nom_dossier"
+if ! grep -q "run_$nom_dossier:" Allrun.sh; then
+    echo "make run_$nom_dossier:" >> Allrun.sh
+fi
+
+echo "-> run_$nom_dossier in Allrun.sh"

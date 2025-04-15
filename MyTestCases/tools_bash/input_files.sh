@@ -75,10 +75,10 @@ echo "$RAO						! Response Amplitude Operator (RAO), 0 no calculation, 1 calcula
 echo "$w_type_output						! output freq type, 1,2,3=[rad/s,Hz,s]">> $NemohFile
 
 echo "---Interaction Theory---">> $NemohFile
+echo "$cylR $cylNtheta $cylNz		! Interaction Theory Cylindrical Envelop">> $NemohFile
 echo "$run_IT			! run IT">> $NemohFile
 if [ $run_IT -eq 1 ]; then
     echo "$run_BEM			! run BEM">> $NemohFile
-    echo "$cylR $cylNtheta $cylNz		! Interaction Theory Cylindrical Envelop">> $NemohFile
     echo "$IT_Nb			! Nb bodies">> $NemohFile
     for ((i=1; i<=BEM_Nb+1; i++)); do
         Bcoord_var="Bcoord$i"

@@ -210,22 +210,22 @@
              READ(ufile,*) InpNEMOHCAL%OptOUTPUT%FreqType
                 ! CML modif fichier Nemoh.cal
              READ(ufile,*)! ---Interaction Theory----
+             READ(ufile,*) InpNEMOHCAL%IntTheory%Cylsurface%cylR,      &
+                           InpNEMOHCAL%IntTheory%Cylsurface%cyldTheta,      &
+                           InpNEMOHCAL%IntTheory%Cylsurface%cyldZ
+            IF (InpNEMOHCAL%IntTheory%Cylsurface%cylR.GT.0 ) THEN
+                        InpNEMOHCAL%IntTheory%Cylsurface%Switch=1
+                        IF (InpNEMOHCAL%Env%Depth.LE.0.) THEN
+                            InpNEMOHCAL%IntTheory%Cylsurface%Switch=0
+                            InpNEMOHCAL%IntTheory%Cylsurface%cylR=0
+                            WRITE(*,'(A)') 'Cannot compute cyldindrical surface for infinite water depth'
+                        END IF
+            ELSE
+                        InpNEMOHCAL%IntTheory%Cylsurface%Switch=0
+            ENDIF
              READ(ufile,*) InpNEMOHCAL%IntTheory%run_IT
              IF (InpNEMOHCAL%IntTheory%run_IT==1) THEN 
                 READ(ufile,*) InpNEMOHCAL%IntTheory%run_BEM
-                READ(ufile,*) InpNEMOHCAL%IntTheory%Cylsurface%cylR,       &
-                            InpNEMOHCAL%IntTheory%Cylsurface%cyldTheta,       &
-                            InpNEMOHCAL%IntTheory%Cylsurface%cyldZ
-                IF (InpNEMOHCAL%IntTheory%Cylsurface%cylR.GT.0 ) THEN
-                            InpNEMOHCAL%IntTheory%Cylsurface%Switch=1
-                            IF (InpNEMOHCAL%Env%Depth.LE.0.) THEN
-                                InpNEMOHCAL%IntTheory%Cylsurface%Switch=0
-                                InpNEMOHCAL%IntTheory%Cylsurface%cylR=0
-                                WRITE(*,'(A)') 'Cannot compute cyldindrical surface for infinite water depth'
-                            END IF
-                ELSE
-                            InpNEMOHCAL%IntTheory%Cylsurface%Switch=0
-                ENDIF
                 READ(ufile,*) InpNEMOHCAL%IntTheory%Nb
                 ALLOCATE(InpNEMOHCAL%IntTheory%Bcoord(InpNEMOHCAL%IntTheory%Nb, 2))
                 DO I=1,InpNEMOHCAL%IntTheory%Nb 
@@ -233,6 +233,10 @@
                 END DO
                 READ(ufile,*) InpNEMOHCAL%IntTheory%NDir, InpNEMOHCAL%IntTheory%DirMin, &
                 InpNEMOHCAL%IntTheory%DirMax
+                ! IF (InpNEMOHCAL%IntTheory%Cylsurface%Switch==0) THEN
+                !     InpNEMOHCAL%IntTheory%run_IT=0
+                !     WRITE(*,'(A)') 'Cannot run Interaction Theory without computing cyldindrical mesh'
+                ! END IF
              END IF 
              READ(ufile,*)! ---QTF----
              READ(ufile,*)InpNEMOHCAL%OptOUTPUT%Switch_SourceDistr

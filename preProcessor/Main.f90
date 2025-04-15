@@ -108,12 +108,12 @@
     Lx                =InpNEMOHCAL%OptOUTPUT%Freesurface%Lx
     Ly                =InpNEMOHCAL%OptOUTPUT%Freesurface%Ly
     Switch_SourceDistr=InpNEMOHCAL%OptOUTPUT%Switch_SourceDistr
+    Switch_Cylsurface =InpNEMOHCAL%IntTheory%Cylsurface%Switch
+    cylR              =InpNEMOHCAL%IntTheory%Cylsurface%cylR
+    cyldTheta         =InpNEMOHCAL%IntTheory%Cylsurface%cyldTheta
+    cyldZ             =InpNEMOHCAL%IntTheory%Cylsurface%cyldZ
     run_IT=InpNEMOHCAL%IntTheory%run_IT
     IF (run_IT .EQ. 1) THEN 
-        Switch_Cylsurface =InpNEMOHCAL%IntTheory%Cylsurface%Switch
-        cylR              =InpNEMOHCAL%IntTheory%Cylsurface%cylR
-        cyldTheta         =InpNEMOHCAL%IntTheory%Cylsurface%cyldTheta
-        cyldZ             =InpNEMOHCAL%IntTheory%Cylsurface%cyldZ
         run_BEM=InpNEMOHCAL%IntTheory%run_BEM
         IT_Nb=InpNEMOHCAL%IntTheory%Nb
         IT_NDir=InpNEMOHCAL%IntTheory%NDir
@@ -121,8 +121,6 @@
         DirMax=InpNEMOHCAL%IntTheory%DirMax
         ALLOCATE(IT_coord(IT_Nb, 2))
         IT_coord=InpNEMOHCAL%IntTheory%Bcoord
-    ELSE 
-        Switch_Cylsurface=0
     END IF 
 
 ! ---------------------------------------------------------------------------
@@ -333,6 +331,9 @@
         WRITE(12,*) cylR, cyldTheta, cyldZ
         CLOSE(12)
     ELSE 
+        IF (Switch_Cylsurface .EQ. 1) THEN
+            WRITE(*,*) "--------- Computing cylindrical mesh ------------"
+        END IF
         WRITE(*,*) "--------- Interaction Theory NOT activated ------------"
     END IF
     
