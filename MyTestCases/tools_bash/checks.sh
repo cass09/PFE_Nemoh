@@ -2,7 +2,7 @@
 # Charger les variables depuis config.sh
 
 
-echo "CHECKS"
+echo "--------------CHECKS----------------"
 # Checks
 DOF_ones=$(echo "${DOF[@]}" | tr ' ' '\n' | grep -c '^1$')
 if [[ $DOF_ones -ne $N_DOF ]]; then

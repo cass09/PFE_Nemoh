@@ -1,25 +1,16 @@
 #!/bin/bash
-# Charger les variables depuis config.sh
 
-echo "Mesh"
-
+echo "--------------Mesh-----------------"
+export LC_NUMERIC=C  # Important pour éviter les virgules comme séparateurs décimaux
 
 # Calculation of Nnodes and Npanels
 for ((i=1; i<=BEM_Nb; i++)); do
+    # echo "Ibody = " $i
     mesh_fileI="mesh_file$i"
     mesh_file="${!mesh_fileI}"  
     cp "MESH/$mesh_file" "$Dossier_Project"
 
-
-    # Utiliser awk pour détecter les lignes contenant uniquement des zéros
-    # Afficher le numéro de la ligne (NR) et la ligne complète ($0)
-    # index=$(awk '{if (($1 < 1e-6 && $1 > -1e-6) && ($2 < 1e-6 && $2 > -1e-6) && ($3 < 1e-6 && $3 > -1e-6) && ($4 < 1e-6 && $4 > -1e-6)) print NR}' "$Dossier_Project/$mesh_file")
-    # Récupérer les indices dans un tableau
     mapfile -t indices < <(awk '{if (($1 < 1e-6 && $1 > -1e-6) && ($2 < 1e-6 && $2 > -1e-6) && ($3 < 1e-6 && $3 > -1e-6) && ($4 < 1e-6 && $4 > -1e-6)) print NR}' "$Dossier_Project/$mesh_file")
-
-    # Vérification du tableau
-    echo "Indices : ${indices[@]}"
-    # Récupérer les indices
     index1=${indices[0]}
     index2=${indices[1]}
 
@@ -27,7 +18,103 @@ for ((i=1; i<=BEM_Nb; i++)); do
     Nnoeuds=$((index1 - 2))
     Npanels=$((index2 - index1 - 1))
 
-    echo " $Nnoeuds, $Npanels"
+    # echo " $Nnoeuds, $Npanels"
+
+    # Récupération dynamique du tableau de translation
+    translate_var="translate$i"
+    eval "translate=(\"\${$translate_var[@]}\")"
+
+    tx=${translate[0]}
+    ty=${translate[1]}
+    tz=${translate[2]}
+    # echo "Translation : tx=$tx, ty=$ty, tz=$tz"
+    translated_file="${mesh_file%.*}_$i.${mesh_file##*.}"
+
+    if (( $(echo "$tx == 0.0 && $ty == 0.0 && $tz == 0.0" | bc -l) )); then     
+        # echo "Translation nulle, copie simple du fichier."
+        cp "$Dossier_Project/$mesh_file" "$Dossier_Project/$translated_file"
+        eval mesh_file$i=\"$(basename "$translated_file")\"
+        continue
+    fi
+    awk -v tx="$tx" -v ty="$ty" -v tz="$tz" -v n_nodes="$Nnoeuds" -v index1="$index1" -v index2="$index2" '
+    NR == 1 {
+        print $1, $2
+        next
+    }
+    NR > 1 && NR <= (1 + n_nodes) {
+        # Translating node coordinates
+        printf "%d %.6f %.6f %.6f\n", $1, $2 + tx, $3 + ty, $4 + tz
+        next
+    }
+    NR == index1 {
+        print "0 0 0 0"
+        next
+    }
+    NR > index1 && NR <= index2 {
+        print $1, $2, $3, $4
+    }
+    ' "$Dossier_Project/$mesh_file" > "$Dossier_Project/$translated_file"
+
+    cp "$Dossier_Project/$mesh_file" "$translated_file"
+    eval mesh_file$i=\"$(basename "$translated_file")\"
+    rm "$Dossier_Project/$mesh_file"
+
+    # Center of gravity
+    cdg_var="CdG$i"
+    eval "cdg=(\"\${$cdg_var[@]}\")"
+    CdGx=$(echo "${cdg[0]} + $tx" | bc -l)
+    CdGy=$(echo "${cdg[1]} + $ty" | bc -l)
+    CdGz=$(echo "${cdg[2]} + $tz" | bc -l)
+    eval $cdg_var="($CdGx $CdGy $CdGz)"
+    # echo $tx $ty $tz
+done
+
+
+
+rm barge_*
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     # if [ "$mesh_file" = "Cylinder.dat" ]; then
     #     Nnoeuds=540
     #     Npanels=300
@@ -70,4 +157,4 @@ for ((i=1; i<=BEM_Nb; i++)); do
     #     echo "Erreur : Problème dans le calcul du nombre de noeuds et de panels du maillage !" >&2
     #     exit 1 
     # fi
-done
+

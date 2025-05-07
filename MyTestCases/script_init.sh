@@ -6,7 +6,6 @@ Origine=(0.0 0.0 0.0)
 # TO DO : 
 # - pour Nemoh.cal : checks (bodies no overlap, R> dim body)
 # - if IT_run - > CdG=Origine   ?= Coord1
-# - calcul Nnoeuds et Npanels très lent
 
 source tools_bash/checks.sh
 if [ $? -ne 0 ]; then
@@ -20,7 +19,13 @@ else
         echo "Error : the project does not exist, BEM must be run !"
         exit 1  
     fi 
+    read -p "The folder '$Dossier_Project' already exist. Overwrite ? (o/n) : " answer
+    if [[ "$answer" != "o" && "$answer" != "O" ]]; then
+        echo "Cancelled"
+        exit 1
+    fi
 fi
+
 source tools_bash/mesh.sh
 source tools_bash/input_files.sh
 
@@ -41,4 +46,7 @@ fi
 
 cp -r "RUN"/* "$Dossier_Project"  
 
+if ! grep -q "run_$Dossier_Project " Allrun.sh; then
+    echo "make run_$Dossier_Project " >> Allrun.sh
+fi
 echo "-> run_$Dossier_Project"

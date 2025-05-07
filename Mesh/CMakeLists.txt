@@ -15,8 +15,10 @@ set(HYDROS_SRC
     ${COMMON_SRC_DIR}/Elementary_functions.f90
     ${COMMON_SRC_DIR}/Environment.f90
     ${COMMON_SRC_DIR}/Mesh.f90
+    ${COMMON_SRC_DIR}/MNemohCal.f90
+    ${COMMON_SRC_DIR}/Constants.f90
     coque.f90
     hydre.f90
     hydrostatic_cal.f90)
-
+# ! CML ajout MNemohCal.f90
 add_executable(hydrosCal ${HYDROS_SRC})

@@ -51,7 +51,6 @@ CONTAINS
            OPEN(NEWUNIT=u2,FILE=trim(wd)//'/Mechanics/Kh.dat',ACTION='READ')
            OPEN(NEWUNIT=u3,FILE=trim(wd)//'/Mechanics/Km.dat',ACTION='READ')
            OPEN(NEWUNIT=u4,FILE=trim(wd)//'/Mechanics/Badd.dat',ACTION='READ')
-
            DO I=1,Nradiation
                 READ(u1,*) (MechCoef%MassMat(I,J),J=1,Nradiation)
                 READ(u2,*) (MechCoef%StiffMat(I,J),J=1,Nradiation)

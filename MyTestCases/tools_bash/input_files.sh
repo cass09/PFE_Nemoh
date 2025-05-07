@@ -1,7 +1,7 @@
 #!/bin/bash
 # Charger les variables depuis config.sh
 
-echo "Writing input files"
+echo "-------------Writing input files-----------------"
 # Nemoh.cal creation
 NemohFile="$Dossier_Project/Nemoh.cal"
 

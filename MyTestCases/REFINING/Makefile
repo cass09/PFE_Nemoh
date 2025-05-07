@@ -1,6 +1,9 @@
 bindir=../../bin/
 
-.PHONY: run clean
+.PHONY: run clean mesh
+
+mesh:
+			$(bindir)/mesh .
 
 # Build and run Sphere reference test case.
 run:

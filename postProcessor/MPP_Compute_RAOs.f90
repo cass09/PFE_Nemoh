@@ -87,7 +87,6 @@ CONTAINS
         FreqVar_text2='Number of periode= '
     ENDIF
 
-
     CALL make_directory(dirname)
     Ninteg2=2*Nintegration
     IF (Ninteg2.GT.10000) THEN
