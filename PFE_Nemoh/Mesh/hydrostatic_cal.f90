@@ -84,6 +84,8 @@
     NF=Mesh%Npanels
     Nsym=Mesh%Isym
     CALL READ_TNEMOHCAL(ID,InpNEMOHCAL)
+    XF=inpNEMOHCAL%Env%Xeff
+    YF=inpNEMOHCAL%Env%Yeff
 !     OPEN(10,FILE=TRIM(ID%ID)//'/Mesh.cal')
 !     READ(10,*) DSCRPT%ID
 !     DSCRPT%lID=LNBLNK(DSCRPT%ID)
@@ -124,10 +126,19 @@
                 zG=InpNEMOHCAL%bodyinput(IdBody)%RadCase(IdMode)%Axis(3)
         END IF
         write(*,*) "body =", IdBody, "Center of gravity: ", xG, yG, zG
+        ! DO j=1+(IdBody-1)*NP,NP+(IdBody-1)*NP
         DO j=1,NP
-                X(j)=Mesh%X(1,j)-xG
-                Y(j)=Mesh%X(2,j)-yG
-                Z(j)=Mesh%X(3,j)
+                IF (InpNEMOHCAL%IntTheory%Cylsurface%Switch==1) THEN
+                ! coord in mesh file for body centered
+                        X(j)=Mesh%X(1,j)-xG+xG
+                        Y(j)=Mesh%X(2,j)-yG+yG
+                        Z(j)=Mesh%X(3,j)
+                ELSE 
+                ! coord from Mesh have the ones of every body
+                        X(j)=Mesh%X(1,j+(IdBody-1)*NP)-xG
+                        Y(j)=Mesh%X(2,j+(IdBody-1)*NP)-yG
+                        Z(j)=Mesh%X(3,j+(IdBody-1)*NP)
+                END IF
         END DO
         DO j=1,NF
                 DO i=1,4
@@ -168,11 +179,11 @@
         CDG(3)=zG
         CALL coque(X,Y,Z,NP,facette,NF,Deplacement,Icoque,Gcoque,CDG,Nsym,rho)
     
-        OPEN(10,FILE=ID%ID(1:ID%lID)//'/mesh/GC_hull.dat', ACTION='WRITE',POSITION='APPEND')
+        OPEN(10,FILE=ID%ID(1:ID%lID)//'/mesh/GC_hull.dat', ACTION='WRITE')
         WRITE(10,'(3(1X,E14.7))') Gcoque(1),Gcoque(2),Gcoque(3)
         CLOSE(10)
     
-        OPEN(10,FILE=ID%ID(1:ID%lID)//'/mesh/Inertia_hull.dat', ACTION='WRITE',POSITION='APPEND')
+        OPEN(10,FILE=ID%ID(1:ID%lID)//'/mesh/Inertia_hull.dat', ACTION='WRITE')
         DO i=1,3
                 WRITE(10,'(3(1X,E14.7))') (Icoque(i,j),j=1,3)
         END DO

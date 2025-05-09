@@ -149,11 +149,10 @@ SUBROUTINE coque(X,Y,Z,NP,facettes,NF,Deplacement,Icoque,Gcoque,CG,Nsym,rho)
                 Icoque(3,3)=Icoque(3,3)+Aire(i)*decoque*((CdG(1,i)-CG(1))**2+(CdG(2,i)-CG(2))**2)
                 END IF
 	END DO
-	IF (Nsym.EQ.1) THEN
+        IF (Nsym.EQ.1) THEN
 	    Icoque(1,2)=0.
 	    Icoque(2,3)=0.
 	END IF
-	!
 	Icoque(2,1)=Icoque(1,2)
 	Icoque(3,1)=Icoque(1,3)
 	Icoque(3,2)=Icoque(2,3)
