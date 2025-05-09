@@ -1,0 +1,9 @@
+/* Setting equation numbers to the right */
+.eqno {
+    float: right;
+}
+
+/* Wider contents */
+.wy-nav-content {
+    max-width: none !important;
+}
