@@ -1,0 +1,54 @@
+{   
+    "nemoh_project": {
+        "name": "PIT3_barge_dof6",
+        "folder": "/home/cassandra/Documents/PFE_MOREnergy/Nemoh_myVersion/PIT3_evanescent/wec_inputs",
+        "mesh_filename": "barge.dat",
+        "mesh_type": "NEMOH",
+        "run_bem": false
+    },
+    "single_body_definition": {
+        "modes": [[1,1,0,0,0.0,0.0,0.0], [1,0,1,0,0.0,0.0,0.0], [1,0,0,1,0.0,0.0,0.0], [2,1,0,0,0.0,0.0,0.0], [2,0,1,0,0.0,0.0,0.0], [2,0,0,1,0.0,0.0,0.0]],
+        "frequency": {
+            "_comment": "(format RAD [rad/s] or HZ [1/s])",
+            "min": 0.3,
+            "max": 2,
+            "number": 20,
+            "format": "RAD"
+        },
+        "direction": {
+            "_comment": "min and max must be 0 and 360.0 DEG. (format DEG or RAD)",
+            "min": 0.0,
+            "max": 360.0,
+            "number": 11,
+            "format": "DEG"
+        },
+        "water_depth": 20.0,
+        "cylinder": {
+            "_comment": "Radius should be at least 1 panel larger than the body mesh.",
+            "radius": 6.36,
+            "azimuthal_discretization": 31,
+            "depth_discretization": 29
+        }
+    },
+    "farm_definition": {
+        "Configuration" : false,
+        "Type" : "Nb2_X",
+        "N_bodies" : 2,
+        "layout": [
+            {"name":"body1", "position": [0,0]},
+            {"name":"body2", "position": [28.72,0]}
+        ], 
+        "wave_directions": {
+            "_comment": "Incoming wave directions (format DEG or RAD)",
+            "min": 0.0,
+            "max": 360.0,
+            "number": 1,
+            "format": "DEG"
+        },
+        "RAO" : true,
+        "Evanescent" : false,
+        "Ne_modes" : 6, 
+        "_comment": "Output Type (format DAT or H5F)",
+        "Output_type" : "DAT"
+    }
+}

@@ -1,0 +1,95 @@
+import numpy as np
+import cmath
+import os
+import h5py
+
+def WriteData(WECArr, directionMB, farm, distance, results, results_h5, Motion):
+    
+    w = 2*np.pi/WECArr.period
+    FR = 1j*w.T*WECArr.Madd.T + WECArr.Crad.T
+    if len(directionMB)==1 and directionMB[0]!=0.00 :
+        beta_value=f"beta_{directionMB[0]}_"
+    else :
+        beta_value=""
+    if farm['Configuration'] :
+        type=farm["Type"] + "_"
+    else :
+        type=""
+    if farm["Evanescent"] : 
+        test= f"E{farm['Ne_modes']}_"
+    else : 
+        test=""
+
+    if farm["Output_type"]=="DAT" : 
+        fe_abs_file_path = os.path.join(results,  f"Global_{test}Fe_abs_{type}{beta_value}d{distance:.2f}.dat")
+        fe_phase_file_path = os.path.join(results,  f"Global_{test}Fe_phase_{type}{beta_value}d{distance:.2f}.dat")
+        madd_file_path = os.path.join(results, f"Global_{test}Madd_{type}{beta_value}d{distance:.2f}.dat")
+        crad_file_path = os.path.join(results,  f"Global_{test}Crad_{type}{beta_value}d{distance:.2f}.dat")
+
+        with open(fe_abs_file_path, "w") as fe_file, open(fe_phase_file_path, "w") as fe_phase_file, open(madd_file_path, "w") as madd_file, open(crad_file_path, "w") as crad_file:
+            fe_file.write("Period   " + " Wave direction    ")
+            fe_file.write(" Fe dof = body x force")
+            fe_file.write("\n")
+            for k, beta in enumerate(directionMB):
+                for i, period in enumerate(w):
+                    fe_file.write(f"{beta:.{4}e}  ")
+                    fe_file.write(f"{period:.{4}e}    ")  # Start with the period
+                    for j in range(len(WECArr.Fex[0, 0, :])):  # Loop over the forces x bodies
+                        fe_file.write(f" {np.abs(WECArr.Fex[i, k, j]):.6e}  ")  # Absolute value of Fe
+                    fe_file.write("\n")
+                fe_file.write("\n")
+
+            fe_phase_file.write(" Wave direction   " + " Period    ")
+            fe_phase_file.write(" Fe dof = body x force")
+            fe_phase_file.write("\n")
+            for k, beta in enumerate(directionMB):
+                for i, period in enumerate(w):
+                    fe_phase_file.write(f"{beta:.4f}  ")
+                    fe_phase_file.write(f"{period:.4f}    ")  # Start with the period
+                    for j in range(len(WECArr.Fex[0, 0, :])):  # Loop over the forces x bodies
+                        fe_phase_file.write(f" {cmath.phase(WECArr.Fex[i, k, j]):.6e}  ")  # Phase of Fe
+                    fe_phase_file.write("\n")
+                fe_phase_file.write("\n")
+
+            N = len(WECArr.Madd[0, :, 0])  # N est la dimension de la matrice Madd
+            madd_file.write("Period " + "Madd_{ij}" + "\n")
+            for i, period in enumerate(w):
+                for j in range(N):
+                    madd_file.write(f"{period:.4f}  ")  # Start with the period
+                    for k in range(N):
+                        madd_file.write(f" {WECArr.Madd[i, j, k]:.6e}  ")  # Madd values
+                    madd_file.write("\n")
+
+            crad_file.write("Period " + "Crad_{ij}" + "\n")
+
+            for i, period in enumerate(w):
+                for j in range(N):
+                    crad_file.write(f"{period:.4f} ")  # Start with the period
+                    for k in range(N):
+                        crad_file.write(f" {WECArr.Crad[i, j, k]:.6e}  ")  # Crad values
+                    crad_file.write("\n")
+
+        if farm['RAO'] :
+            RAO_file_path = os.path.join(Motion,  f"Global_{test}RAO_{type}{beta_value}d{distance:.2f}.dat")
+            with open(RAO_file_path, "w") as RAO_file:
+
+                RAO_file.write(" Frecency   "+"|X| (m/m)" +"|Y| (m/m)"+ "|Z| (m/m)" +"|phi| (deg)" +"|theta| (deg)" +"|psi| (deg)" +"ang(x) (deg)"+ "ang(y) (deg)"+ "ang(z) (deg)"+ "ang(phi) (deg)"+ "ang(theta) (deg)" +"ang(psi) (deg)")
+                RAO_file.write("\n")
+                for k, beta in enumerate(directionMB):
+                    RAO_file.write(f"beta={beta:.4f} \n ")
+                    for i, period in enumerate(w):
+                        RAO_file.write(f"{period:.4f}    ")  # Start with the period
+                        for j in range(len(WECArr.RAO[0, 0, :])):  # Loop over the forces x bodies
+                            RAO_file.write(f" {np.abs(WECArr.RAO[i, k, j]):.6e}  ")  # Absolute value of Fe
+                        for j in range(len(WECArr.RAO[0, 0, :])):  # Loop over the forces x bodies
+                            RAO_file.write(f" {cmath.phase(WECArr.RAO[i, k, j]):.6e}  ")  # Absolute value of Fe
+                        RAO_file.write("\n")
+
+    else :
+        h5f = h5py.File(results_h5, 'w')
+        h5f.create_dataset(f'radiation_{type}_d{distance}', data=FR)
+        h5f.create_dataset(f'excitation_{type}_d{distance}', data=WECArr.Fex)
+        h5f.create_dataset('frequency', data=WECArr.period)
+        h5f.close()
+
+    return farm["Output_type"]
