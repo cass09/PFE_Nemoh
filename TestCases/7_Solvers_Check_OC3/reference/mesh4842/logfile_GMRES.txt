@@ -1,7 +1,0 @@
-  NP Gauss Quadrature Integ.:            4
-  EPS min z                 :   1.0000000E-03
-  Linear Solver: GMRES
-  STARTING TIME:
-   Date:           25 -          11 -        2022
-   Time:           13 :           2 :          27
-  Computation time   31.36676      [s]

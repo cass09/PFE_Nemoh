@@ -1,7 +1,0 @@
-  NP Gauss Quadrature Integ.:            4
-  EPS min z                 :   1.0000000E-03
-  Linear Solver: LU DECOMPOSITION
-  STARTING TIME:
-   Date:           25 -          11 -        2022
-   Time:           13 :           3 :          24
-  Computation time   153.3543      [s]

@@ -1,5 +1,0 @@
-add_subdirectory(1_Sphere)
-add_subdirectory(2_SymmetricSphere)
-add_subdirectory(3_FiniteDepthSphere)
-add_subdirectory(4_SymmetricFiniteDepthSphere)
-add_subdirectory(5_AlienSphere)

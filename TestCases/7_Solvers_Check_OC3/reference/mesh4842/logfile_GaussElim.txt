@@ -1,7 +1,0 @@
-  NP Gauss Quadrature Integ.:            4
-  EPS min z                 :   1.0000000E-03
-  Linear Solver: GAUSS ELIMINATION
-  STARTING TIME:
-   Date:           25 -          11 -        2022
-   Time:           12 :          58 :          44
-  Computation time   145.2007      [s]

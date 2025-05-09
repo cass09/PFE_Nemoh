@@ -1,4 +1,0 @@
-get_filename_component(TEST_BASE_NAME ${CMAKE_CURRENT_SOURCE_DIR} NAME)
-
-add_subdirectory(mesh_610half_nolid_QTF_Floating_FS)
-add_subdirectory(mesh_610half_QTF_Floating)
