@@ -85,6 +85,10 @@ def CompareResultsRAO(fileBEM, filePIT, param_d, type, Nw, Nb, tol, precision) :
     freq_PIT = dataPIT[:, 0]
     Coef_PIT_abs = dataPIT[:,1:dof*Nb+1]
     Coef_PIT_ph = dataPIT[:,dof*Nb+1:2*dof*Nb+1]
+    Coef_PIT_abs[:,3:6]=Coef_PIT_abs[:,3:6]*180/np.pi
+    Coef_PIT_ph[:,:]=Coef_PIT_ph[:,:]*180/np.pi
+    Coef_PIT_abs[:,9:12]=Coef_PIT_abs[:,9:12]*180/np.pi
+    Coef_PIT_abs[:,16:18]=Coef_PIT_abs[:,16:18]*180/np.pi
         
     # print("BEM", beta_BEM, freq_BEM)
     # print("PIT", beta_PIT, freq_PIT)
@@ -202,7 +206,7 @@ def plot_multiple_RAO(file_refs, noms, distances, Nb, Nw, titre, Phase, max_X):
             else : 
                 for j in range(Nb) : 
                     color = couleurs[j % len(couleurs)]
-                    axes[i].plot(freq, data[:, (j*6)+i+1], f'{color}-o',markersize=2, label=f'{noms[idx]} - body{j+1} for d={distances[idx]}')
+                    axes[i].plot(freq, data[:, (j*6)+i+1], f'{color}-o',markersize=2, label=f'{noms[idx]} - body{j+1} for d={distances[idx]}m')
 
         # Tracer les RAO phases (7 à 12)
         if Phase : 
@@ -213,7 +217,7 @@ def plot_multiple_RAO(file_refs, noms, distances, Nb, Nw, titre, Phase, max_X):
                     for k in range(Nb) : 
                         color = couleurs[k % len(couleurs)]
                         j=i+6
-                        axes[i].plot(freq, data[:, (k*6)+j+1], f'{color}-o',markersize=2, label=f'{noms[idx]} - body{k+1} d={distances[idx]}')
+                        axes[i].plot(freq, data[:, (k*6)+j+1], f'{color}-o',markersize=2, label=f'{noms[idx]} - body{k+1} d={distances[idx]}m')
                     # axes[i].plot(freq, data[:, 6+j+1], f'{colorbis}-o',markersize=4, label=f'body2 d={distances[idx]}')
 
     # Mise en forme des figures et sauvegarde
@@ -251,7 +255,7 @@ def plot_RAO_multiple_d(fileREF, filesBEM, filesPIT, vect_DOF, distances, Nb, Nw
     files : liste de chemins vers les fichiers REF (RAO)
     distances : liste des identifiants ou distances pour les titres/sauvegardes
     """
-    couleurs = ['b', 'g', 'r', 'c', 'm', 'y', 'k']  # palette de couleurs (réutilisée si plus de 7 courbes)
+    couleurs = ['b', 'g', 'r', 'gold', 'm', 'darkcyan', 'orange', 'y', 'k']  # palette de couleurs (réutilisée si plus de 7 courbes)
 
     # Initialiser les figures pour les 12 courbes
     nb_figures = len(vect_DOF) * Nb
@@ -265,112 +269,116 @@ def plot_RAO_multiple_d(fileREF, filesBEM, filesPIT, vect_DOF, distances, Nb, Nw
     freqREF = dataREF[:, 0]
     indice_graph=0
     for i, dof in enumerate(vect_DOF):
+        axes[indice_graph].plot(freqREF, dataREF[:, dof], linestyle='--', color='black', label=f'REF')
         for j in range(Nb) : 
-            axes[indice_graph].plot(freqREF, dataREF[:, dof], linestyle='--', color='black', label=f'REF d=0')
-
             for idx, fileRAO in enumerate(filesBEM):
                 data = np.loadtxt(fileRAO, skiprows=2, max_rows=Nw)
                 freq = data[:, 0]
-                color = couleurs[idx % len(couleurs)]
-                axes[indice_graph].plot(freq, data[:, (j*6)+dof], f'{color}-o',markersize=2, label=f'BEM - body{j+1} for d={distances[idx]}')
+                color = couleurs[idx+j % len(couleurs)]
+                axes[indice_graph].plot(freq, data[:, (j*6)+dof], linestyle='-', color=color,marker='o', markersize=2, label=f'BEM - body{j+1}')
             for idx, filePIT in enumerate(filesPIT):
                 dataPIT = np.loadtxt(filePIT, skiprows=2, max_rows=Nw)
                 freqIT = dataPIT[:, 0]
-                color = couleurs[idx+2 % len(couleurs)]
-                axes[indice_graph].plot(freqIT, dataPIT[:, (j*6)+dof], f'{color}--+',markersize=4, label=f'PIT - body{j+1} for d={distances[idx]}')
+                color = couleurs[idx+Nb+j % len(couleurs)]
+                RAOvalue=dataPIT[:, (j*6)+dof]
+                if dof>3 :
+                    RAOvalue=RAOvalue*180/np.pi
+                axes[indice_graph].plot(freqIT, RAOvalue, linestyle=':', color=color,marker='+',markersize=4, label=f'PIT - body{j+1}')
             axes[indice_graph].set_xlim(0, max_X)
-            axes[indice_graph].set_title(f"RAO |Amplitude| - body{j+1} - DOF {dof+j*6} \n {titre}")
-            axes[indice_graph].set_xlabel("Fréquence (rad/s)")
+            axes[indice_graph].set_title(f"RAO |Amplitude| - DOF {dof} and {dof+j*6} - d={distances[0]}m \n {titre}")
+            axes[indice_graph].set_xlabel("Frequency (rad/s)")
             axes[indice_graph].set_ylabel(f"|RAO| DOF {dof}")
             axes[indice_graph].grid(True)
             axes[indice_graph].legend()
             figs[indice_graph].tight_layout()
-            figs[indice_graph].savefig(f"N3_RAO_amplitude_body{j+1}_DOF{dof+j*6}_d{distances}.png", dpi=300)
-            indice_graph=indice_graph+1
+            # figs[indice_graph].savefig(f"N3_RAO_amplitude_body{j+1}_DOF{dof+j*6}_d{distances}.png", dpi=300)
+        figs[indice_graph].savefig(f"N3_RAO_amplitude_DOF{dof}_{dof+j*6}_d{distances}.png", dpi=300)
+        indice_graph=indice_graph+1
 
         # Tracer les RAO phases (7 à 12)
     if Phase : 
         offset = nb_dof*Nb
         for i, dof in enumerate(vect_DOF):
+            axes[indice_graph].plot(freqREF, dataREF[:, dof+6], linestyle='--', color='black', label=f'REF')
             for j in range(Nb) : 
                 k=dof-1+offset + 6*j
-                axes[indice_graph].plot(freqREF, dataREF[:, dof+6], linestyle='--', color='black', label=f'REF d=0')
-
                 for idx, fileRAO in enumerate(filesBEM):
                     data = np.loadtxt(fileRAO, skiprows=2, max_rows=Nw)
                     freq = data[:, 0]
-                    color = couleurs[idx % len(couleurs)]
-                    axes[indice_graph].plot(freq, data[:, k+1], f'{color}-o',markersize=2, label=f'BEM - body{j+1} d={distances[idx]}')
+                    color = couleurs[idx+j % len(couleurs)]
+                    axes[indice_graph].plot(freq, data[:, k+1], linestyle='-', color=color,marker='o',markersize=2, label=f'BEM - body{j+1}')
                 for idx, filePIT in enumerate(filesPIT):
                     dataPIT = np.loadtxt(filePIT, skiprows=2, max_rows=Nw)
                     freqIT = dataPIT[:, 0]
-                    color = couleurs[idx+2 % len(couleurs)]
-                    axes[indice_graph].plot(freqIT, dataPIT[:, k+1], f'{color}-+',markersize=4, label=f'PIT - body{j+1} for d={distances[idx]}')
+                    color = couleurs[idx+Nb+j % len(couleurs)]
+                    axes[indice_graph].plot(freqIT, dataPIT[:, k+1]*180/np.pi,linestyle=':', color=color,marker='+',markersize=4, label=f'PIT - body{j+1}')
             
                 # print("indice",i, dof, j, k, idx, indice_graph)
                 axes[indice_graph].set_xlim(0, max_X)
-                axes[indice_graph].set_title(f"RAO Phase - body{j+1} - DOF {dof+j*6} \n {titre}")
+                axes[indice_graph].set_title(f"RAO Phase - DOF {dof} and {dof+j*6} - d={distances[0]}m \n {titre}")
                 axes[indice_graph].set_xlabel("Fréquence (rad/s)")
                 axes[indice_graph].set_ylabel(f"Phase(RAO) DOF {dof} ")
                 axes[indice_graph].grid(True)
                 axes[indice_graph].legend()
                 figs[indice_graph].tight_layout()
-                figs[indice_graph].savefig(f"N3_RAO_phase_body{j+1}_DOF{dof+j*6}_d{distances}.png", dpi=300)
-                indice_graph=indice_graph+1
+            figs[indice_graph].savefig(f"N3_RAO_phase_DOF{dof}_{dof+j*6}_d{distances}.png", dpi=300)
+            indice_graph=indice_graph+1
     # Fermer les figures (optionnel si on ne veut pas les afficher)
     for fig in figs:
         plt.close(fig)
 
 
 chemin="/home/cassandra/Documents/PFE_MOREnergy/Nemoh_myVersion/"
-N3 = False
-PLOT_multi_d=True
-PLOT_REF=False
-Plot_phase=False
+N3 = True
+PLOT_multi_d=False
+# PLOT_REF=False
+Plot_phase=True
 Nb=2
 config="X"
-Nw=60
-max_X=2*np.pi
-test="De_"
-beta="beta_0.0_"
+Nw=20
+max_X=2
+test=""
+beta=""
+mesh="cylinder"
 PIT_type=f"Nb{Nb}_{config}"
-titre=f"Barge - {PIT_type}, Nw={Nw}, Nbeta=11, dof=6, Ndir=1"
-# BEM= f"{chemin}PFE_Nemoh/MyTestCases/BEM_{PIT_type}"
-BEM= f"{chemin}PFE_Nemoh/MyTestCases/BEM_barge_dof6_R6.36_w2pi"
-PIT= f"{chemin}PIT3_E/wec_inputs/PIT3_barge_w2pi"
-RAO_REF = f"{chemin}COMP/Motion_1body/RAO.dat"
+titre=f"{mesh} - {PIT_type}, Nw={Nw}, Nbeta=11, dof=6, Ndir=1"
+BEM= f"{chemin}PFE_Nemoh/MyTestCases/BEM_cylinder_{PIT_type}"
+# BEM= f"{chemin}PFE_Nemoh/MyTestCases/BEM_barge_dof6_R6.36"
+PIT= f"{chemin}PIT3_E/wec_inputs/PIT3_Cylinder_dof6"
+RAO_REF = f"{chemin}COMP/Motion_1body/RAO_{mesh}.dat"
 
-if PLOT_REF : 
-    d_graphs= [[1], [16], [64]]
+# if PLOT_REF : 
+#     d_graphs= [[1], [16], [64]]
     
     
-    print("\n ------------ PLOT with REF -----------------")
+#     print("\n ------------ PLOT with REF -----------------")
 
-    for j, vect_d in enumerate(d_graphs): 
-        files = [RAO_REF]
-        filesPIT = [RAO_REF]
-        names = ['REF']
-        namesPIT = ['REF']
-        distances = [0]
+#     for j, vect_d in enumerate(d_graphs): 
+#         files = [RAO_REF]
+#         filesPIT = [RAO_REF]
+#         names = ['REF']
+#         namesPIT = ['REF']
+#         distances = [0]
 
-        param_d=vect_d
-        print("\n ------------Distances=", param_d, "-----------------")
-        for i, d in enumerate(param_d) : 
-            # RAO_BEM = f"{BEM}/BEM_barge_Nb{Nb}{config}_d{d}/Motion/RAO.dat" 
-            RAO_BEM = f"{BEM}/BEM_barge_d{d}/Motion/RAO.dat" 
-            RAO_PIT= f"{PIT}/Motion/Global_{test}RAO_{PIT_type}_d{d}.00.dat"
-            files.append(RAO_BEM) 
-            filesPIT.append(RAO_PIT) 
-            distances.append(d)
-            names.append('BEM') 
-            namesPIT.append('PIT') 
-        plot_multiple_RAO(files, names, distances, Nb, Nw, titre, Plot_phase, max_X)
-        plot_multiple_RAO(filesPIT, namesPIT, distances, Nb, Nw, titre, Plot_phase, max_X)
+#         param_d=vect_d
+#         print("\n ------------Distances=", param_d, "-----------------")
+#         for i, d in enumerate(param_d) : 
+#             # RAO_BEM = f"{BEM}/BEM_barge_Nb{Nb}{config}_d{d}/Motion/RAO.dat" 
+#             RAO_BEM = f"{BEM}/BEM_barge_d{d}/Motion/RAO.dat" 
+#             RAO_PIT= f"{PIT}/Motion/Global_{test}RAO_{PIT_type}_d{d}.00.dat"
+#             files.append(RAO_BEM) 
+#             filesPIT.append(RAO_PIT) 
+#             distances.append(d)
+#             names.append('BEM') 
+#             namesPIT.append('PIT') 
+#         plot_multiple_RAO(files, names, distances, Nb, Nw, titre, Plot_phase, max_X)
+#         plot_multiple_RAO(filesPIT, namesPIT, distances, Nb, Nw, titre, Plot_phase, max_X)
 
 if PLOT_multi_d : 
-    print("\n ------------ PLOT without REF -----------------")
+    print("\n ------------ PLOT -----------------")
 
-    dist_graphs= [[1], [16], [64]]
+    # dist_graphs= [[1], [8], [16], [64]]
+    dist_graphs= [[1], [16]]
     DOF=[1, 3, 5]
     for j, vect_d in enumerate(dist_graphs): 
         BEM_files=[]
@@ -378,8 +386,8 @@ if PLOT_multi_d :
         print("\n ---DOF=", DOF, "Distances=", vect_d, "--------")
 
         for i, d in enumerate(vect_d) : 
-            # RAO_BEM = f"{BEM}/BEM_barge_Nb{Nb}{config}_d{d}/Motion/RAO.dat"
-            RAO_BEM = f"{BEM}/BEM_barge_d{d}/Motion/RAO.dat"
+            RAO_BEM = f"{BEM}/BEM_{mesh}_Nb{Nb}_{config}_d{d}/Motion/RAO.dat"
+            # RAO_BEM = f"{BEM}/BEM_{mesh}_d{d}/Motion/RAO.dat"
             RAO_PIT= f"{PIT}/Motion/Global_{test}RAO_{PIT_type}_{beta}d{d}.00.dat"
             BEM_files.append(RAO_BEM) 
             PIT_files.append(RAO_PIT) 
@@ -390,19 +398,19 @@ if PLOT_multi_d :
 
 
 if N3 : 
-    param_d=8
-    limite=70
+    param_d=1
+    limite=400
     print("Comparaison sur RAO")
     while param_d<=limite : 
         print("\n ------------Distance=", param_d, "-----------------")
         distance=f"d{param_d}"
         # BEM_file=f"BEM_cylinder_{PIT_type}/BEM_cylinder_Nb{Nb}_{config}_{distance}"
 
-        titre=f"{titre}, {distance}"
+        titre=f"{titre}, d={param_d}m"
 
-        # RAO_BEM = f"{BEM}/BEM_barge_Nb{Nb}{config}_d{param_d}/Motion/RAO.dat"
-        RAO_BEM = f"{BEM}/BEM_barge_d{param_d}/Motion/RAO.dat"
-        RAO_PIT= f"{PIT}/Motion/Global_{test}RAO_{PIT_type}_beta_0.0_d{param_d}.00.dat"
+        RAO_BEM = f"{BEM}/BEM_cylinder_Nb{Nb}_{config}_d{param_d}/Motion/RAO.dat"
+        # RAO_BEM = f"{BEM}/BEM_barge_d{param_d}/Motion/RAO.dat"
+        RAO_PIT= f"{PIT}/Motion/Global_{test}RAO_{PIT_type}_{beta}d{param_d}.00.dat"
 
         with open(f"EcartsRelatifs_RAO_{PIT_type}.dat", "a") as f:
             f.write(f"{param_d}     ")
