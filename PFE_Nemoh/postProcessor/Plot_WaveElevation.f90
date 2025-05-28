@@ -83,15 +83,17 @@
             EtaI(i,j)=1./Environment%G*II*w*Potential
             HKleft=0.
             HKright=0.
+            ! CML -w added
             DO l=1,Results%Nradiation
-                HKleft=HKleft+RAOs(l,iw,iBeta)*Results%HKochinRadiation(iw,l,k)
-                HKright=HKright+RAOs(l,iw,iBeta)*Results%HKochinRadiation(iw,l,k+1)
+                HKleft=HKleft-w*RAOs(l,iw,iBeta)*Results%HKochinRadiation(iw,l,k)
+                HKright=HKright-w*RAOs(l,iw,iBeta)*Results%HKochinRadiation(iw,l,k+1)
             END DO
             HKleft=HKleft+Results%HKochinDiffraction(iw,iBeta,k)
             HKright=HKright+Results%HKochinDiffraction(iw,iBeta,k+1)
             HKochin=HKleft+(HKright-HKleft)*(theta-Results%theta(k))/(Results%theta(k+1)-Results%theta(k))
             IF (r.GT.0) THEN
                 Potential=SQRT(kwave/(2.*PI*r))*CIH(kwave,0.,Environment%Depth)*CEXP(II*(kwave*r-0.25*PI))*HKochin
+                ! Potential=SQRT(2./(kwave*PI*r))*CIH(kwave,0.,Environment%Depth)*CEXP(II*(kwave*r-0.25*PI))*HKochin
             ELSE
                 Potential=0.
             END IF
@@ -99,12 +101,40 @@
             Eta(i,j)=EtaI(i,j)+EtaP(i,j)
         END DO
     END DO
-    OPEN(10,FILE=TRIM(ID%ID)//'/results/WaveField.tec')
-    WRITE(10,'(A)') 'VARIABLES="X" "Y" "etaI_C" "etaI_S" "etaP_C" "etaC_S" "etaI_C+etaP_C" "etaI_S+etaI_P" "|etaP|" "|etaI+etaP|"'
+    OPEN(10,FILE=TRIM(ID%ID)//'/results/WaveField_I.tec')
+    WRITE(10,'(A)') 'VARIABLES="X" "Y" "abs" "phase" "real" "image"'
     WRITE(10,'(A,E14.7,A,I6,A,I6,A)') 'ZONE t="Wave frequency - w =',w,'",N=',Nx*Ny,', E=',(Nx-1)*(Ny-1),' , F=FEPOINT,ET=QUADRILATERAL'
     DO i=1,Nx
         DO j=1,Ny
-            WRITE(10,'(10(X,E14.7))') X(i),Y(j),REAL(etaI(i,j)),IMAG(etaI(i,j)),REAL(etaP(i,j)),IMAG(etaP(i,j)),REAL(etaI(i,j)+etaP(i,j)),IMAG(etaI(i,j)+etaP(i,j)),ABS(etaP(i,j)),ABS(eta(i,j))
+            WRITE(10,'(10(X,E14.7))') X(i),Y(j),ABS(etaI(i,j)), ATAN2(AIMAG(etaI(i,j)), REAL(etaI(i,j))),REAL(etaI(i,j)),AIMAG(etaI(i,j))
+        END DO
+    END DO
+    DO i=1,Nx-1
+        DO j=1,Ny-1
+            WRITE(10,'(I5,3(2X,I5))') j+(i-1)*Ny,j+i*Ny,j+1+i*Ny,j+1+(i-1)*Ny
+        END DO
+    END DO
+    CLOSE(10)
+    OPEN(10,FILE=TRIM(ID%ID)//'/results/WaveField_S.tec')
+    WRITE(10,'(A)') 'VARIABLES="X" "Y" "abs" "phase" "real" "image"'
+    WRITE(10,'(A,E14.7,A,I6,A,I6,A)') 'ZONE t="Wave frequency - w =',w,'",N=',Nx*Ny,', E=',(Nx-1)*(Ny-1),' , F=FEPOINT,ET=QUADRILATERAL'
+    DO i=1,Nx
+        DO j=1,Ny
+            WRITE(10,'(10(X,E14.7))') X(i),Y(j),ABS(etaP(i,j)), ATAN2(AIMAG(etaP(i,j)), REAL(etaP(i,j))),REAL(etaP(i,j)),AIMAG(etaP(i,j))
+        END DO
+    END DO
+    DO i=1,Nx-1
+        DO j=1,Ny-1
+            WRITE(10,'(I5,3(2X,I5))') j+(i-1)*Ny,j+i*Ny,j+1+i*Ny,j+1+(i-1)*Ny
+        END DO
+    END DO
+    CLOSE(10)
+    OPEN(10,FILE=TRIM(ID%ID)//'/results/WaveField.tec')
+    WRITE(10,'(A)') 'VARIABLES="X" "Y" "abs" "phase" "real" "image" '
+    WRITE(10,'(A,E14.7,A,I6,A,I6,A)') 'ZONE t="Wave frequency - w =',w,'",N=',Nx*Ny,', E=',(Nx-1)*(Ny-1),' , F=FEPOINT,ET=QUADRILATERAL'
+    DO i=1,Nx
+        DO j=1,Ny
+            WRITE(10,'(10(X,E14.7))') X(i),Y(j),ABS(eta(i,j)), ATAN2(AIMAG(eta(i,j)), REAL(eta(i,j))),REAL(eta(i,j)),AIMAG(eta(i,j))
         END DO
     END DO
     DO i=1,Nx-1

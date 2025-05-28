@@ -199,7 +199,7 @@ CONTAINS
     OPEN(NEWUNIT=u, FILE=filename, ACTION='WRITE')
 
     DO i = 1, Ntheta
-      WRITE(u, *) Thetas(i), ABS(HKochin(i)), ATAN2(AIMAG(HKochin(i)),REAL(HKochin(i)))
+      WRITE(u, *) Thetas(i), ABS(HKochin(i)), ATAN2(AIMAG(HKochin(i)),REAL(HKochin(i))), AIMAG(HKochin(i)), REAL(HKochin(i))
     END DO
 
     CLOSE(u)

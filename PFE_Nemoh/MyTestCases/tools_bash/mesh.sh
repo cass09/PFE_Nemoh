@@ -28,11 +28,18 @@ for ((i=1; i<=BEM_Nb; i++)); do
     ty=${translate[1]}
     tz=${translate[2]}
     # echo "Translation : tx=$tx, ty=$ty, tz=$tz"
-    translated_file="${mesh_file%.*}_$i.${mesh_file##*.}"
+    if [ "$BEM_Nb" -gt 1 ]; then
+        translated_file="${mesh_file%.*}_$i.${mesh_file##*.}"
+    else
+        translated_file=$mesh_file
+    fi
 
     if (( $(echo "$tx == 0.0 && $ty == 0.0 && $tz == 0.0" | bc -l) )); then     
         # echo "Translation nulle, copie simple du fichier."
-        cp "$Dossier_Project/$mesh_file" "$Dossier_Project/$translated_file"
+        if [ "$translated_file" != "$mesh_file" ]; then
+            cp "$Dossier_Project/$mesh_file" "$Dossier_Project/$translated_file"
+        fi
+        
         eval mesh_file$i=\"$(basename "$translated_file")\"
         continue
     fi
@@ -70,8 +77,7 @@ for ((i=1; i<=BEM_Nb; i++)); do
 done
 
 
-
-rm barge_*
+rm -f barge_*
 
 
 

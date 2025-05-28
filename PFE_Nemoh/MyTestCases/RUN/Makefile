@@ -5,6 +5,7 @@ bindir=../../bin/
 run_hydro:
 			$(bindir)/preProc .
 			$(bindir)/hydrosCal .
+			$(bindir)/postProc .
 # Build and run Sphere reference test case.
 run:
 			$(bindir)/preProc .
@@ -13,6 +14,8 @@ run:
 			$(bindir)/postProc .
 			# cp -r reference_results/Aquaplus results/
 			# cp reference_results/cylinder.lay results/
+			rm -rf mesh
+			rm -rf Normalvelocities.dat
 			
 # Delete results of the computations
 clean:
@@ -22,4 +25,3 @@ clean:
 			rm -rf logfile.txt
 			rm -rf Motion/
 			rm -rf Mechanics/
-			rm -rf input_IT.dat

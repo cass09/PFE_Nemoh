@@ -103,12 +103,13 @@
         END DO
         END SUBROUTINE CopyTResults
 !       ---
-        SUBROUTINE ReadTResults(Results,namefile,nameindex,namefileFK)
+        SUBROUTINE ReadTResults(Results,namefile,nameindex,namefileFK, wd)
         IMPLICIT NONE
         TYPE(TResults) :: Results
-        CHARACTER(LEN=*) :: namefile,nameindex,namefileFK
+        CHARACTER(LEN=*) :: namefile,nameindex,namefileFK, wd
+        CHARACTER(LEN=30) :: namefileKochin, i_problem
         INTEGER :: Nw,Nbeta,Nradiation,Nintegration,Ntheta
-        INTEGER :: i,j,k,c
+        INTEGER :: i,j,k,c, pb
         REAL,DIMENSION(:),ALLOCATABLE :: line
         OPEN(10,FILE=nameindex)
         READ(10,*) Nw,Nbeta,Nradiation,Nintegration,Ntheta
@@ -165,6 +166,34 @@
         END DO
         CLOSE(10)
         DEALLOCATE(line)
+        ALLOCATE(line(3))
+        pb=1
+        IF (Results%Ntheta.GT.0) THEN
+            DO i=1, Nw
+                DO j=1, Nbeta
+                    WRITE(i_problem, '(I0.5)') pb
+                    namefileKochin=TRIM(wd)//'/results/Kochin.'//TRIM(i_problem)//'.dat'
+                    OPEN(10,FILE=namefileKochin)
+                    DO k=1,Ntheta
+                            READ(10,*) (line(c),c=1,3)
+                            Results%HKochinDiffraction(i,j,k)= line(2)*CEXP(CMPLX(0.,1.)*line(3))
+                    END DO
+                    CLOSE(10)
+                    pb=pb+1
+                END DO
+                DO j=1, Nradiation
+                    WRITE(i_problem, '(I0.5)') pb
+                    namefileKochin=TRIM(wd)//'/results/Kochin.'//TRIM(i_problem)//'.dat'
+                    OPEN(10,FILE=namefileKochin)
+                    DO k=1,Ntheta
+                            READ(10,*) (line(c),c=1,3)
+                            Results%HKochinRadiation(i,j,k)= line(2)*CEXP(CMPLX(0.,1.)*line(3))
+                    END DO
+                    CLOSE(10)
+                    pb=pb+1
+                END DO
+            END DO
+        END IF
         END SUBROUTINE ReadTResults
 !       ---
         SUBROUTINE SaveTResults(Results,namedir,InpNEMOHCAL)

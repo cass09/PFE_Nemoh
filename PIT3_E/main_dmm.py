@@ -29,12 +29,14 @@ project_data = json.load(open('project_definition.json', 'r'))
 nemoh_def = project_data['nemoh_project']
 dirwecs = nemoh_def['folder']
 nemohdynamics = os.path.join(os.getcwd(), 'BEM', 'nemoh')
-fgdf = os.path.join(dirwecs, nemoh_def['mesh_filename'])
+MeshFolder=os.path.join(dirwecs, 'MESH')
+fgdf = os.path.join(MeshFolder, nemoh_def['mesh_filename'])
 run_nemoh = nemoh_def['run_bem']
 dire = os.path.join(dirwecs, nemoh_def['name'])
 fdat = os.path.join(dire, f"{nemoh_def['mesh_filename'][:-4]}.dat")
 convention = 'N'
 results = os.path.join(dire, "results")
+resultsIT = os.path.join(dire, "resultsIT")
 results_h5 = os.path.join(dire, "Farm_DMM.h5")
 Motion = os.path.join(dire, "Motion")
 mesh_ = os.path.join(dire, "mesh")
@@ -112,9 +114,9 @@ if farm["Evanescent"] :
     WEC.PickTransfers(picklefile_E, save=True)
     loaded_WEC = WEC.PickTransfers(picklefile_E, save=False)
 else : 
-    if not UT.file_exist(picklefile):
-        WEC.Transfers(dire, results, results, farm["Evanescent"], BEM='N', Tol= 1e-6)
-        WEC.PickTransfers(picklefile, save=True)
+    # if not UT.file_exist(picklefile):
+    WEC.Transfers(dire, results, results, farm["Evanescent"], BEM='N', Tol= 1e-9)
+    WEC.PickTransfers(picklefile, save=True)
     
     loaded_WEC = WEC.PickTransfers(picklefile, save=False)
 WEC.Write(results, farm["Evanescent"])
@@ -182,6 +184,20 @@ while param_distance<=limite :
         directoryH=Nemoh.InputHydro(dire, coord)
         statusH = Nemoh.RunHydro(directoryH, nemohdynamics)
         WECArr.RAO(Mechanics) 
+    if farm['Kochin'] :
+        if not os.path.exists(Motion):
+            os.makedirs(Motion)
+        thetaK = np.linspace(farm['K_param'][1],
+                        farm['K_param'][2],
+                        farm['K_param'][0])
+        thetaK=thetaK*np.pi/180
+        # print(thetaK)
+        WECArr.Kochin(thetaK) 
+
+    if farm['FS_param'][0] != 0 :
+        if not os.path.exists(Motion):
+            os.makedirs(Motion)
+        WECArr.FreeSurface(coord, farm['FS_param'][0], farm['FS_param'][1], farm['FS_param'][2], farm['FS_param'][3]) 
 
 
 #################################################################
@@ -189,7 +205,9 @@ while param_distance<=limite :
 ######################### OUTPUT ################################
 #################################################################
 #################################################################
-    out=output.WriteData(WECArr, directionMB, farm, distance, results, results_h5, Motion)
+    if not os.path.exists(resultsIT):
+        os.makedirs(resultsIT)
+    out=output.WriteData(WECArr, directionMB, farm, distance, resultsIT, results_h5, Motion)
     param_distance=param_distance*2
 
 

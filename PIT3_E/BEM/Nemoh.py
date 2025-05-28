@@ -79,7 +79,7 @@ def InputDynamics(directory, meshes, modes, freq, directions, depth, FieldPoints
     with open(_j(directory,'input_solver.txt'), 'w') as f :
         f.write('2				! Gauss quadrature (GQ) surface integration, N^2 GQ Nodes, specify N(1,4)\n')
         f.write('0.001			! eps_zmin for determine minimum z of flow and source points of panel, zmin=eps_zmin*body_diameter\n')
-        f.write('0 				! 0 GAUSS ELIM.; 1 LU DECOMP.: 2 GMRES	!Linear system solver\n')
+        f.write('1 				! 0 GAUSS ELIM.; 1 LU DECOMP.: 2 GMRES	!Linear system solver\n')
         f.write('10 1e-5 1000  	! Restart parameter, Relative Tolerance, max iter -> additional input for GMRES')
     
     with open(_j(directory,'Hydro.txt'), 'w') as f :

@@ -1343,3 +1343,218 @@ run_BEM_Hydro_16:
 	$(MAKE) -C $(testdir)/BEM_Hydro_16/ run
 clean_BEM_Hydro_16:
 	$(MAKE) -C $(testdir)/BEM_Hydro_16/ clean
+.PHONY: run_BEM_Hydro_d16 clean_BEM_Hydro_d16
+run_BEM_Hydro_d16:
+	$(MAKE) -C $(testdir)/BEM_Hydro_d16/ run
+clean_BEM_Hydro_d16:
+	$(MAKE) -C $(testdir)/BEM_Hydro_d16/ clean
+.PHONY: run_BEM_Hydro_d0 clean_BEM_Hydro_d0
+run_BEM_Hydro_d0:
+	$(MAKE) -C $(testdir)/BEM_Hydro_d0/ run
+clean_BEM_Hydro_d0:
+	$(MAKE) -C $(testdir)/BEM_Hydro_d0/ clean
+.PHONY: run_BEM_Hydro_Nb2_d16 clean_BEM_Hydro_Nb2_d16
+run_BEM_Hydro_Nb2_d16:
+	$(MAKE) -C $(testdir)/BEM_Hydro_Nb2_d16/ run
+clean_BEM_Hydro_Nb2_d16:
+	$(MAKE) -C $(testdir)/BEM_Hydro_Nb2_d16/ clean
+.PHONY: run_BEM_Hydro_pitd0 clean_BEM_Hydro_pitd0
+run_BEM_Hydro_pitd0:
+	$(MAKE) -C $(testdir)/BEM_Hydro_pitd0/ run
+clean_BEM_Hydro_pitd0:
+	$(MAKE) -C $(testdir)/BEM_Hydro_pitd0/ clean
+.PHONY: run_BEM_cylinder_Nb1 clean_BEM_cylinder_Nb1
+run_BEM_cylinder_Nb1:
+	$(MAKE) -C $(testdir)/BEM_cylinder_Nb1/ run
+clean_BEM_cylinder_Nb1:
+	$(MAKE) -C $(testdir)/BEM_cylinder_Nb1/ clean
+.PHONY: run_BEM_kochin clean_BEM_kochin
+run_BEM_kochin:
+	$(MAKE) -C $(testdir)/BEM_kochin/ run
+clean_BEM_kochin:
+	$(MAKE) -C $(testdir)/BEM_kochin/ clean
+.PHONY: run_BEM_kochinTEST_Nb3_X_d16 clean_BEM_kochinTEST_Nb3_X_d16
+run_BEM_kochinTEST_Nb3_X_d16:
+	$(MAKE) -C $(testdir)/BEM_kochinTEST_Nb3_X_d16/ run
+clean_BEM_kochinTEST_Nb3_X_d16:
+	$(MAKE) -C $(testdir)/BEM_kochinTEST_Nb3_X_d16/ clean
+.PHONY: run_BEM_kochin_Nb2_X_d16 clean_BEM_kochin_Nb2_X_d16
+run_BEM_kochin_Nb2_X_d16:
+	$(MAKE) -C $(testdir)/BEM_kochin_Nb2_X_d16/ run
+clean_BEM_kochin_Nb2_X_d16:
+	$(MAKE) -C $(testdir)/BEM_kochin_Nb2_X_d16/ clean
+.PHONY: run_BEM_kochin_Nb2_X_d64 clean_BEM_kochin_Nb2_X_d64
+run_BEM_kochin_Nb2_X_d64:
+	$(MAKE) -C $(testdir)/BEM_kochin_Nb2_X_d64/ run
+clean_BEM_kochin_Nb2_X_d64:
+	$(MAKE) -C $(testdir)/BEM_kochin_Nb2_X_d64/ clean
+.PHONY: run_BEM_FS_Nb2_X_d16 clean_BEM_FS_Nb2_X_d16
+run_BEM_FS_Nb2_X_d16:
+	$(MAKE) -C $(testdir)/BEM_FS_Nb2_X_d16/ run
+clean_BEM_FS_Nb2_X_d16:
+	$(MAKE) -C $(testdir)/BEM_FS_Nb2_X_d16/ clean
+.PHONY: run_BEM_cylinderMesh1 clean_BEM_cylinderMesh1
+run_BEM_cylinderMesh1:
+	$(MAKE) -C $(testdir)/BEM_cylinderMesh1/ run
+clean_BEM_cylinderMesh1:
+	$(MAKE) -C $(testdir)/BEM_cylinderMesh1/ clean
+.PHONY: run_BEM_cylinderMesh2 clean_BEM_cylinderMesh2
+run_BEM_cylinderMesh2:
+	$(MAKE) -C $(testdir)/BEM_cylinderMesh2/ run
+clean_BEM_cylinderMesh2:
+	$(MAKE) -C $(testdir)/BEM_cylinderMesh2/ clean
+.PHONY: run_BEM_bargeMesh1pit clean_BEM_bargeMesh1pit
+run_BEM_bargeMesh1pit:
+	$(MAKE) -C $(testdir)/BEM_bargeMesh1pit/ run
+clean_BEM_bargeMesh1pit:
+	$(MAKE) -C $(testdir)/BEM_bargeMesh1pit/ clean
+.PHONY: run_BEM_bargeMesh2pit clean_BEM_bargeMesh2pit
+run_BEM_bargeMesh2pit:
+	$(MAKE) -C $(testdir)/BEM_bargeMesh2pit/ run
+clean_BEM_bargeMesh2pit:
+	$(MAKE) -C $(testdir)/BEM_bargeMesh2pit/ clean
+.PHONY: run_BEM_Cylinder_Mesh1 clean_BEM_Cylinder_Mesh1
+run_BEM_Cylinder_Mesh1:
+	$(MAKE) -C $(testdir)/BEM_Cylinder_Mesh1/ run
+clean_BEM_Cylinder_Mesh1:
+	$(MAKE) -C $(testdir)/BEM_Cylinder_Mesh1/ clean
+.PHONY: run_BEM_barge_Mesh1 clean_BEM_barge_Mesh1
+run_BEM_barge_Mesh1:
+	$(MAKE) -C $(testdir)/BEM_barge_Mesh1/ run
+clean_BEM_barge_Mesh1:
+	$(MAKE) -C $(testdir)/BEM_barge_Mesh1/ clean
+.PHONY: run_BEM_barge_Nb2 clean_BEM_barge_Nb2
+run_BEM_barge_Nb2:
+	$(MAKE) -C $(testdir)/BEM_barge_Nb2/ run
+clean_BEM_barge_Nb2:
+	$(MAKE) -C $(testdir)/BEM_barge_Nb2/ clean
+.PHONY: run_BEM_Cylinder_Nb2 clean_BEM_Cylinder_Nb2
+run_BEM_Cylinder_Nb2:
+	$(MAKE) -C $(testdir)/BEM_Cylinder_Nb2/ run
+clean_BEM_Cylinder_Nb2:
+	$(MAKE) -C $(testdir)/BEM_Cylinder_Nb2/ clean
+.PHONY: run_BEM_Mesh1_barge clean_BEM_Mesh1_barge
+run_BEM_Mesh1_barge:
+	$(MAKE) -C $(testdir)/BEM_Mesh1_barge/ run
+clean_BEM_Mesh1_barge:
+	$(MAKE) -C $(testdir)/BEM_Mesh1_barge/ clean
+.PHONY: run_BEM_Mesh1_barge_test clean_BEM_Mesh1_barge_test
+run_BEM_Mesh1_barge_test:
+	$(MAKE) -C $(testdir)/BEM_Mesh1_barge_test/ run
+clean_BEM_Mesh1_barge_test:
+	$(MAKE) -C $(testdir)/BEM_Mesh1_barge_test/ clean
+.PHONY: run_BEM_Mesh2_barge clean_BEM_Mesh2_barge
+run_BEM_Mesh2_barge:
+	$(MAKE) -C $(testdir)/BEM_Mesh2_barge/ run
+clean_BEM_Mesh2_barge:
+	$(MAKE) -C $(testdir)/BEM_Mesh2_barge/ clean
+.PHONY: run_BEM_Mesh2SYM_barge clean_BEM_Mesh2SYM_barge
+run_BEM_Mesh2SYM_barge:
+	$(MAKE) -C $(testdir)/BEM_Mesh2SYM_barge/ run
+clean_BEM_Mesh2SYM_barge:
+	$(MAKE) -C $(testdir)/BEM_Mesh2SYM_barge/ clean
+.PHONY: run_BEM_Mesh3SYM_barge clean_BEM_Mesh3SYM_barge
+run_BEM_Mesh3SYM_barge:
+	$(MAKE) -C $(testdir)/BEM_Mesh3SYM_barge/ run
+clean_BEM_Mesh3SYM_barge:
+	$(MAKE) -C $(testdir)/BEM_Mesh3SYM_barge/ clean
+.PHONY: run_BEM_Mesh3_barge clean_BEM_Mesh3_barge
+run_BEM_Mesh3_barge:
+	$(MAKE) -C $(testdir)/BEM_Mesh3_barge/ run
+clean_BEM_Mesh3_barge:
+	$(MAKE) -C $(testdir)/BEM_Mesh3_barge/ clean
+.PHONY: run_BEM_Mesh4_barge clean_BEM_Mesh4_barge
+run_BEM_Mesh4_barge:
+	$(MAKE) -C $(testdir)/BEM_Mesh4_barge/ run
+clean_BEM_Mesh4_barge:
+	$(MAKE) -C $(testdir)/BEM_Mesh4_barge/ clean
+.PHONY: run_BEM_Mesh4SYM_barge clean_BEM_Mesh4SYM_barge
+run_BEM_Mesh4SYM_barge:
+	$(MAKE) -C $(testdir)/BEM_Mesh4SYM_barge/ run
+clean_BEM_Mesh4SYM_barge:
+	$(MAKE) -C $(testdir)/BEM_Mesh4SYM_barge/ clean
+.PHONY: run_BEM_Cylinder_Mesh1SYM clean_BEM_Cylinder_Mesh1SYM
+run_BEM_Cylinder_Mesh1SYM:
+	$(MAKE) -C $(testdir)/BEM_Cylinder_Mesh1SYM/ run
+clean_BEM_Cylinder_Mesh1SYM:
+	$(MAKE) -C $(testdir)/BEM_Cylinder_Mesh1SYM/ clean
+.PHONY: run_BEM_Cylinder_Mesh2SYM clean_BEM_Cylinder_Mesh2SYM
+run_BEM_Cylinder_Mesh2SYM:
+	$(MAKE) -C $(testdir)/BEM_Cylinder_Mesh2SYM/ run
+clean_BEM_Cylinder_Mesh2SYM:
+	$(MAKE) -C $(testdir)/BEM_Cylinder_Mesh2SYM/ clean
+.PHONY: run_BEM_Cylinder_Mesh3SYM clean_BEM_Cylinder_Mesh3SYM
+run_BEM_Cylinder_Mesh3SYM:
+	$(MAKE) -C $(testdir)/BEM_Cylinder_Mesh3SYM/ run
+clean_BEM_Cylinder_Mesh3SYM:
+	$(MAKE) -C $(testdir)/BEM_Cylinder_Mesh3SYM/ clean
+.PHONY: run_BEM_Cylinder_Mesh2 clean_BEM_Cylinder_Mesh2
+run_BEM_Cylinder_Mesh2:
+	$(MAKE) -C $(testdir)/BEM_Cylinder_Mesh2/ run
+clean_BEM_Cylinder_Mesh2:
+	$(MAKE) -C $(testdir)/BEM_Cylinder_Mesh2/ clean
+.PHONY: run_BEM_barge_Nb1_MeshOG clean_BEM_barge_Nb1_MeshOG
+run_BEM_barge_Nb1_MeshOG:
+	$(MAKE) -C $(testdir)/BEM_barge_Nb1_MeshOG/ run
+clean_BEM_barge_Nb1_MeshOG:
+	$(MAKE) -C $(testdir)/BEM_barge_Nb1_MeshOG/ clean
+.PHONY: run_BEM_barge_Nb1_Mesh2 clean_BEM_barge_Nb1_Mesh2
+run_BEM_barge_Nb1_Mesh2:
+	$(MAKE) -C $(testdir)/BEM_barge_Nb1_Mesh2/ run
+clean_BEM_barge_Nb1_Mesh2:
+	$(MAKE) -C $(testdir)/BEM_barge_Nb1_Mesh2/ clean
+.PHONY: run_BEM_barge_Nb1_Mesh3 clean_BEM_barge_Nb1_Mesh3
+run_BEM_barge_Nb1_Mesh3:
+	$(MAKE) -C $(testdir)/BEM_barge_Nb1_Mesh3/ run
+clean_BEM_barge_Nb1_Mesh3:
+	$(MAKE) -C $(testdir)/BEM_barge_Nb1_Mesh3/ clean
+.PHONY: run_BEM_barge_Nb1_Mesh4 clean_BEM_barge_Nb1_Mesh4
+run_BEM_barge_Nb1_Mesh4:
+	$(MAKE) -C $(testdir)/BEM_barge_Nb1_Mesh4/ run
+clean_BEM_barge_Nb1_Mesh4:
+	$(MAKE) -C $(testdir)/BEM_barge_Nb1_Mesh4/ clean
+.PHONY: run_BEM_barge_Nb1_Gauss clean_BEM_barge_Nb1_Gauss
+run_BEM_barge_Nb1_Gauss:
+	$(MAKE) -C $(testdir)/BEM_barge_Nb1_Gauss/ run
+clean_BEM_barge_Nb1_Gauss:
+	$(MAKE) -C $(testdir)/BEM_barge_Nb1_Gauss/ clean
+.PHONY: run_BEM_barge_Nb1_Gmres clean_BEM_barge_Nb1_Gmres
+run_BEM_barge_Nb1_Gmres:
+	$(MAKE) -C $(testdir)/BEM_barge_Nb1_Gmres/ run
+clean_BEM_barge_Nb1_Gmres:
+	$(MAKE) -C $(testdir)/BEM_barge_Nb1_Gmres/ clean
+.PHONY: run_BEM_barge_Nb1_Mesh5 clean_BEM_barge_Nb1_Mesh5
+run_BEM_barge_Nb1_Mesh5:
+	$(MAKE) -C $(testdir)/BEM_barge_Nb1_Mesh5/ run
+clean_BEM_barge_Nb1_Mesh5:
+	$(MAKE) -C $(testdir)/BEM_barge_Nb1_Mesh5/ clean
+.PHONY: run_BEM_barge_Nb1_Mesh6 clean_BEM_barge_Nb1_Mesh6
+run_BEM_barge_Nb1_Mesh6:
+	$(MAKE) -C $(testdir)/BEM_barge_Nb1_Mesh6/ run
+clean_BEM_barge_Nb1_Mesh6:
+	$(MAKE) -C $(testdir)/BEM_barge_Nb1_Mesh6/ clean
+.PHONY: run_BEM_cylinder_Nb1_MeshOG clean_BEM_cylinder_Nb1_MeshOG
+run_BEM_cylinder_Nb1_MeshOG:
+	$(MAKE) -C $(testdir)/BEM_cylinder_Nb1_MeshOG/ run
+clean_BEM_cylinder_Nb1_MeshOG:
+	$(MAKE) -C $(testdir)/BEM_cylinder_Nb1_MeshOG/ clean
+.PHONY: run_BEM_cylinder_Nb1_Mesh2 clean_BEM_cylinder_Nb1_Mesh2
+run_BEM_cylinder_Nb1_Mesh2:
+	$(MAKE) -C $(testdir)/BEM_cylinder_Nb1_Mesh2/ run
+clean_BEM_cylinder_Nb1_Mesh2:
+	$(MAKE) -C $(testdir)/BEM_cylinder_Nb1_Mesh2/ clean
+.PHONY: run_BEM_cylinder_Nb1_Mesh3 clean_BEM_cylinder_Nb1_Mesh3
+run_BEM_cylinder_Nb1_Mesh3:
+	$(MAKE) -C $(testdir)/BEM_cylinder_Nb1_Mesh3/ run
+clean_BEM_cylinder_Nb1_Mesh3:
+	$(MAKE) -C $(testdir)/BEM_cylinder_Nb1_Mesh3/ clean
+.PHONY: run_BEM_cylinder_Nb1_Mesh4 clean_BEM_cylinder_Nb1_Mesh4
+run_BEM_cylinder_Nb1_Mesh4:
+	$(MAKE) -C $(testdir)/BEM_cylinder_Nb1_Mesh4/ run
+clean_BEM_cylinder_Nb1_Mesh4:
+	$(MAKE) -C $(testdir)/BEM_cylinder_Nb1_Mesh4/ clean
+.PHONY: run_BEM_cylinder_Nb1_Mesh5 clean_BEM_cylinder_Nb1_Mesh5
+run_BEM_cylinder_Nb1_Mesh5:
+	$(MAKE) -C $(testdir)/BEM_cylinder_Nb1_Mesh5/ run
+clean_BEM_cylinder_Nb1_Mesh5:
+	$(MAKE) -C $(testdir)/BEM_cylinder_Nb1_Mesh5/ clean

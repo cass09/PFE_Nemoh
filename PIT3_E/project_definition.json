@@ -1,18 +1,18 @@
 {   
     "nemoh_project": {
-        "name": "PIT3_barge_dof6",
-        "folder": "/home/cassandra/Documents/PFE_MOREnergy/Nemoh_myVersion/PIT3_evanescent/wec_inputs",
-        "mesh_filename": "barge.dat",
+        "name": "PIT3_McNatt_Cylinder",
+        "folder": "/home/cassandra/Documents/PFE_MOREnergy/Nemoh_myVersion/PIT3_E/wec_inputs",
+        "mesh_filename": "Cylinder.dat",
         "mesh_type": "NEMOH",
         "run_bem": false
     },
     "single_body_definition": {
-        "modes": [[1,1,0,0,0.0,0.0,0.0], [1,0,1,0,0.0,0.0,0.0], [1,0,0,1,0.0,0.0,0.0], [2,1,0,0,0.0,0.0,0.0], [2,0,1,0,0.0,0.0,0.0], [2,0,0,1,0.0,0.0,0.0]],
+        "modes": [[1,1,0,0,0.0,0.0,0.0], [1,0,0,1,0.0,0.0,0.0]],
         "frequency": {
             "_comment": "(format RAD [rad/s] or HZ [1/s])",
-            "min": 0.3,
-            "max": 2,
-            "number": 20,
+            "min": 0.01,
+            "max": 2.5,
+            "number": 10,
             "format": "RAD"
         },
         "direction": {
@@ -22,12 +22,12 @@
             "number": 11,
             "format": "DEG"
         },
-        "water_depth": 20.0,
+        "water_depth": 16.67,
         "cylinder": {
             "_comment": "Radius should be at least 1 panel larger than the body mesh.",
-            "radius": 6.36,
-            "azimuthal_discretization": 31,
-            "depth_discretization": 29
+            "radius": 5.1,
+            "azimuthal_discretization": 32,
+            "depth_discretization": 20
         }
     },
     "farm_definition": {
@@ -36,7 +36,7 @@
         "N_bodies" : 2,
         "layout": [
             {"name":"body1", "position": [0,0]},
-            {"name":"body2", "position": [28.72,0]}
+            {"name":"body2", "position": [26.2,0]}
         ], 
         "wave_directions": {
             "_comment": "Incoming wave directions (format DEG or RAD)",
@@ -45,9 +45,12 @@
             "number": 1,
             "format": "DEG"
         },
-        "RAO" : true,
+        "RAO" : false,
+        "Kochin" :false,
+        "K_param":[21, 0.0, 360.0],
+        "FS_param" : [0, 30, 92, 30],
         "Evanescent" : false,
-        "Ne_modes" : 6, 
+        "Ne_modes" : 1, 
         "_comment": "Output Type (format DAT or H5F)",
         "Output_type" : "DAT"
     }

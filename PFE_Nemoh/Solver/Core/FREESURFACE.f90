@@ -132,7 +132,7 @@ CONTAINS
         MeshCyl%X(1, j), MeshCyl%X(2, j), MeshCyl%X(3, j),      &
         PHI, IGreen,VFace                         &
         )
-      ! Mesh OR MeshCyl ???????!
+      ! Mesh OR MeshCyl ???????! 
 
       ! Get elevation ETA from potential PHI
       ETA(j) = II*omega/Env%G*PHI
