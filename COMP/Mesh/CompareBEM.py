@@ -9,17 +9,41 @@ CA = False
 Fex = False
 folder="ConvergenceMesh"
 mesh = "barge"
-N1_file=f"{folder}/BEM_{mesh}_Nb1_MeshOG"
-N2_file=f"{folder}/BEM_{mesh}_Nb1_Mesh2"
-N3_file=f"{folder}/BEM_{mesh}_Nb1_Mesh3"
-N4_file=f"{folder}/BEM_{mesh}_Nb1_Mesh4"
-N5_file=f"{folder}/BEM_{mesh}_Nb1_Mesh5"
-# NOMS=["Np=250", "Np=404", "Np=584", "Np=1000", "Np=1308", "Np=1626"]
-NOMS=["Np=300", "Np=624", "Np=1128", "Np=1764", "Np=2448"]
-file=[N1_file, N2_file, N3_file, N4_file, N5_file]
-Nmesh=5
 GRAPHS = False
-CoF=True
+CoF=False
+GoF=False
+CPU=False
+DX=True
+lambda_min=15.3
+
+if mesh=="barge" :
+    N1_file=f"{folder}/BEM_{mesh}_Nb1_MeshOG"
+    N2_file=f"{folder}/BEM_{mesh}_Nb1_Mesh2"
+    N3_file=f"{folder}/BEM_{mesh}_Nb1_Mesh6"
+    N4_file=f"{folder}/BEM_{mesh}_Nb1_Mesh3"
+    N5_file=f"{folder}/BEM_{mesh}_Nb1_Mesh4"
+    N6_file=f"{folder}/BEM_{mesh}_Nb1_Mesh5"
+    NOMS=["Np=250", "Np=404", "Np=584", "Np=1000", "Np=1308", "Np=1626"]
+    CPU_data=[82.4734268, 220.602951, 463.660278, 1374.32117, 2280.13379, 2991.26440]
+    DX_data=[1.93716, 1.80949, 1.43969, 0.96858, 0.90474, 0.78574]
+
+    file=[N1_file, N2_file, N3_file, N4_file, N5_file, N6_file]
+    Nmesh=6
+else :
+    N1_file=f"{folder}/BEM_{mesh}_Nb1_MeshOG"
+    N2_file=f"{folder}/BEM_{mesh}_Nb1_Mesh2"
+    N3_file=f"{folder}/BEM_{mesh}_Nb1_Mesh3"
+    N4_file=f"{folder}/BEM_{mesh}_Nb1_Mesh4"
+    N5_file=f"{folder}/BEM_{mesh}_Nb1_Mesh5"
+    file=[N1_file, N2_file, N3_file, N4_file, N5_file]
+    Nmesh=5
+
+if mesh=="cylinder" :
+    NOMS=["Np=300", "Np=624", "Np=1128", "Np=1764", "Np=2448"]
+    CPU_data=[234.574417, 1009.54639, 3356.67651, 8029.98682, 13032.3477]
+    DX_data=[1.53719, 1.09730, 0.87242, 0.61791, 0.54865]
+    
+
 # titre=f"Nw=20, Nbeta=11, dof=6, Ndir=1, {distance}"
 titre=f"Convergence study on {mesh} mesh"
 COMP1=N1_file
@@ -351,6 +375,139 @@ def Trace_COF(CoF, data, NOMS, dof_vect, Nfiles, mesh) :
                 f.write(f"\t{CoF[j, k]:.4f}")
             f.write("\n")
 
+def Calcul_GOF(REF, files, Nom_data, dof_vect, NOMS, mesh):
+    min_CoF=np.zeros((len(dof_vect), len(files)))
+    mean_CoF=np.zeros((len(dof_vect), len(files)))
+    for k in range(len(files)) : 
+        frequencies, COEF = read_RAD_BEM(files[k])
+        frequencies, COEF_REF = read_RAD_BEM(REF)
+        for j, dof in enumerate(dof_vect) :
+            CoF_value = []
+            for i in range(len(frequencies)) :
+                value=COEF[i][dof-1][dof - 1]
+                value_ref=COEF_REF[i][dof-1][dof - 1]
+                ratio = np.abs(1-np.abs((value-value_ref)/value_ref))
+                if ratio <0.9:
+                    print("dof=",dof, " - mesh=", NOMS[k]," - w=", frequencies[i], "GoF<90%", ratio)
+                CoF_value.append(ratio)
+                mean_CoF[j,k]=mean_CoF[j,k]+ratio
+            min_CoF[j, k] = np.min(CoF_value)*100  # ou np.mean(CoF_value) si tu préfères la moyenne
+    mean_CoF=mean_CoF/len(frequencies)*100
+    Trace_GOF(mean_CoF, "mean", Nom_data, NOMS, dof_vect, len(files), mesh)
+    Trace_GOF(min_CoF, "min", Nom_data, NOMS, dof_vect, len(files), mesh)
+
+def Calcul_GOF_Fex(REF, files, dof_vect, NOMS, mesh):
+    min_CoF=np.zeros((len(dof_vect), len(files)))
+    mean_CoF=np.zeros((len(dof_vect), len(files)))
+    min_CoF_ph=np.zeros((len(dof_vect), len(files)))
+    mean_CoF_ph=np.zeros((len(dof_vect), len(files)))
+    for k in range(len(files)) : 
+        beta, frequencies, Coef_abs, Coef_ph = read_Fex_BEM(files[k])
+        beta, frequencies, Coef_abs_REF, Coef_ph_REF = read_Fex_BEM(REF)
+        for j, dof in enumerate(dof_vect) :
+            CoF_value = []
+            CoF_value_ph = []
+            for i in range(len(frequencies)) :
+                value=Coef_abs[0][i, dof - 1]
+                value_ref=Coef_abs_REF[0][i, dof - 1]
+                ratio = (1-np.abs((value-value_ref)/value_ref))
+                if ratio <0.9:
+                    print("dof=",dof, " - mesh=", NOMS[k]," - w=", frequencies[i], "ABS GoF<90%", ratio)
+                value_ph=Coef_ph[0][i, dof - 1]
+                value_ref_ph=Coef_ph_REF[0][i, dof - 1]
+                ratio_ph = (1-np.abs((value_ph-value_ref_ph)/value_ref_ph))
+                if ratio_ph <0.9:
+                    print("dof=",dof," - w=", frequencies[i], " - mesh=", NOMS[k], "PHASE GoF<90%")
+                CoF_value.append(ratio)
+                CoF_value_ph.append(ratio_ph)
+                mean_CoF[j,k]=mean_CoF[j,k]+ratio
+                mean_CoF_ph[j,k]=mean_CoF_ph[j,k]+ratio_ph
+            min_CoF[j, k] = np.min(CoF_value)*100  # ou np.mean(CoF_value) si tu préfères la moyenne
+            min_CoF_ph[j, k] = np.min(CoF_value_ph)*100  # ou np.mean(CoF_value) si tu préfères la moyenne
+    mean_CoF=mean_CoF/len(frequencies)*100
+    mean_CoF_ph=mean_CoF_ph/len(frequencies)*100
+    Trace_GOF(mean_CoF, "mean", "|Fex|", NOMS, dof_vect, len(files), mesh)
+    Trace_GOF(min_CoF, "min", "|Fex|", NOMS, dof_vect, len(files), mesh)
+    Trace_GOF(mean_CoF_ph, "mean", "phase(Fex)", NOMS, dof_vect, len(files), mesh)
+    Trace_GOF(min_CoF_ph, "min", "phase(Fex)", NOMS, dof_vect, len(files), mesh)
+
+def Trace_GOF(GoF, type, data, NOMS, dof_vect, Nfiles, mesh) :
+    with open(f"GoodnessOfFit_{mesh}_{data}_{type}.dat", "w") as f:
+        # En-tête avec les noms de fichiers
+        f.write(f"# Goodness of Fit - {type} value ({data})\n")
+        f.write("DOF\\Mesh \n"+"".join([f"\t{nom}" for nom in NOMS]) + "\n")
+
+        for j, dof in enumerate(dof_vect):
+            f.write(f"{dof}")
+            for k in range(Nfiles):
+                f.write(f"\t{GoF[j, k]:.4f}")
+            f.write("\n")
+    
+    # Création du graphique
+    for j, dof in enumerate(dof_vect):
+        plt.figure(figsize=(8, 5))
+        bars = plt.bar(NOMS[:-1], GoF[j,:-1], color='skyblue', edgecolor='black')
+
+        # Ajouter les valeurs au-dessus des barres
+        for bar in bars:
+            yval = bar.get_height()
+            plt.text(bar.get_x() + bar.get_width()/2, yval + 0.5, f'{yval:.2f}%', ha='center', va='bottom')
+
+        # Mise en forme
+        plt.ylim(0, 105)
+        plt.xlabel('Mesh')
+        plt.ylabel(f'{type} GoF (%)')
+        plt.title(f'Goodness of Fit of {data} for DOF {dof}')
+        plt.grid(axis='y', linestyle='--', alpha=0.7)
+
+        plt.tight_layout()
+        # plt.show()
+        plt.savefig(f"GOF_{mesh}_{data}_{type}_dof{dof}.png", dpi=300)
+        plt.close()
+
+def Trace_CPU(Time, NOMS, mesh, unit) :
+    # Création du graphe à bâtons
+    plt.figure(figsize=(8, 5))
+    bars = plt.bar(NOMS, Time, color='coral', edgecolor='black')
+
+    # Ajout des valeurs au-dessus des barres
+    for bar in bars:
+        yval = bar.get_height()
+        plt.text(bar.get_x() + bar.get_width()/2, yval + 1, f'{yval:.2f}', ha='center', va='bottom')
+
+    # Mise en forme
+    plt.xlabel('Mesh')
+    plt.ylabel(f'Computation Time ({unit})')
+    plt.title(f'Computation Time ({unit})')
+    plt.grid(axis='y', linestyle='--', alpha=0.7)
+
+    plt.tight_layout()
+    # plt.show()
+    plt.savefig(f"CPU_{mesh}_{unit}.png", dpi=300)
+    plt.close()
+
+def Trace_DX(DX, lambda_min, NOMS, mesh) :
+    # Création du graphe à bâtons
+    data=lambda_min/np.array(DX)
+    plt.figure(figsize=(8, 5))
+    bars = plt.bar(NOMS, data, color='coral', edgecolor='black')
+
+    # Ajout des valeurs au-dessus des barres
+    for bar in bars:
+        yval = bar.get_height()
+        plt.text(bar.get_x() + bar.get_width()/2, yval + 0.05, f'{yval:.2f}', ha='center', va='bottom')
+
+    # Mise en forme
+    plt.xlabel('Mesh')
+    plt.ylabel(f'Ratio (-)')
+    plt.title(f'Ratio between the min length wave and the mesh size')
+    plt.grid(axis='y', linestyle='--', alpha=0.7)
+
+    plt.tight_layout()
+    # plt.show()
+    plt.savefig(f"Ratio_DX_{mesh}.png", dpi=300)
+    plt.close()
+
 if CM : 
     print("Comparaison sur Added Mass")
     L_inf_error, L2_error = CompareResultsRAD(CM_BEM, CM_N2)
@@ -392,3 +549,22 @@ if CoF:
     Calcul_COF(CAfiles[-1], CAfiles, "Added_Mass", dof, NOMS, mesh)
     Calcul_COF(CMfiles[-1], CMfiles, "Damping", dof, NOMS, mesh)
     Calcul_COF_Fex(Fefiles[-1], Fefiles, dof, NOMS, mesh)
+
+if GoF:
+    dof=[1, 3, 5]
+    print("------------GoF-----------------")
+    print("Added Mass")
+    Calcul_GOF(CAfiles[-1], CAfiles, "Added_Mass", dof, NOMS, mesh)
+    print("Damping")
+    Calcul_GOF(CMfiles[-1], CMfiles, "Damping", dof, NOMS, mesh)
+    print("Fex")
+    Calcul_GOF_Fex(Fefiles[-1], Fefiles, dof, NOMS, mesh)
+
+if CPU:
+    Trace_CPU(CPU_data, NOMS, mesh, "s")
+    CPU_data=np.array(CPU_data)/60
+    Trace_CPU(CPU_data, NOMS, mesh, "min")
+
+if DX:
+    Trace_DX(DX_data, lambda_min, NOMS, mesh)
+    

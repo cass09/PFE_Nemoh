@@ -3,11 +3,11 @@ distance=16
 configuration=False
 config_type="X"
 BEM_Nb=1						# Number of bodies
-Nom_projet="BEM_Hydro_16"
+Nom_projet="BEM_K_FS_Nb1"
 FS=0
 
 # --- Description of floating bodies -  ----------------------------------------------------------------------------------------------
-CdG1=(28.72 0.0 0.0)
+CdG1=(0.0 0.0 0.0)
 mesh_file1="barge.dat"			# Name of mesh file
 Rcyl=6.36
 
@@ -15,27 +15,25 @@ if [[ "$configuration" == "True" ]]; then
     source tools_bash/config.sh
 else
     translate1=(0.0 0.0 0.0)
-    translate2=(10 0.0 0.0)
     Dossier_Project=$Nom_projet
     lenghtX=0
     lenghtY=30
+    translate2=(0.0 0.0 0.0)
     CdG2=(0.0 0.0 0.0)
-    CdG3=(0.0 0.0 0.0)
-    mesh_file2="barge.dat"			# Name of mesh file
-    mesh_file3="barge.dat"	
+    mesh_file2="CylinderR3H6m1.dat"		# Name of mesh file
 fi
 
-N_DOF=6			# Number of degrees of freedom
-N_Forces=6						# Number of resulting generalised forces
+N_DOF=1			# Number of degrees of freedom
+N_Forces=1						# Number of resulting generalised forces
 # 1 activated
-DOF=(1 1 1 1 1 1)   # Surge, Sway, Haeve, Roll, Pitch, Yaw
-FORCES=(1 1 1 1 1 1) # Fx, Fy, Fz, Mx, My, Mz
+DOF=(1  0   0   0   0   0)   # Surge, Sway, Haeve, Roll, Pitch, Yaw
+FORCES=(1  0   0   0   0   0) # Fx, Fy, Fz, Mx, My, Mz
 
 #  --- Load cases to be solved -------------------------------------------------------------------------------------------------------
-w_type=1   
-Nw=20
+w_type=1  
+Nw=1
 w_min=0.3	
-w_max=2.0			# Freq type 1,2,3=[rad/s,Hz,s], Number of wave frequencies/periods, Min, and Max
+w_max=2			# Freq type 1,2,3=[rad/s,Hz,s], Number of wave frequencies/periods, Min, and Max
 BEM_Nbeta=1	
 BEM_BetaMin=0.0
 BEM_BetaMax=0.0				# Number of wave directions, Min and Max (degrees)
@@ -45,9 +43,9 @@ IRF=0
 dt=0.1
 tf=10.0				# IRF calculation (0 for no calculation), time step and duration
 show_pressure=0						# Show pressure
-KochinN=0
+KochinN=11
 KochinMin=0.0
-KochinMax=180.0			# Kochin function 		# Number of directions of calculation (0 for no calculations), Min and Max (degrees)
+KochinMax=360.0			# Kochin function 		# Number of directions of calculation (0 for no calculations), Min and Max (degrees)
 
 # Free surface elevation 	# Number of points in x direction (0 for no calcutions) and y direction and dimensions of domain in x and y direction
 FS_Nx=$lenghtX
@@ -55,7 +53,7 @@ FS_Ny=$lenghtY
 FS_Lx=$lenghtX
 FS_Ly=$lenghtY
 	
-RAO=1		# Response Amplitude Operator (RAO), 0 no calculation, 1 calculated -> Inertia.cal
+RAO=0		# Response Amplitude Operator (RAO), 0 no calculation, 1 calculated -> Inertia.cal
 w_type_output=1						# output freq type, 1,2,3=[rad/s,Hz,s]
 
 
@@ -82,6 +80,7 @@ cylR=0
 cylNtheta=31
 cylNz=29		# Interaction Theory Cylindrical Envelop
 run_IT=0			# run IT
+
 run_BEM=1			# run BEM
 IT_Nb=2			# Nb bodies
 Bcoord1=(0.0   0.0)			# Coord body 1

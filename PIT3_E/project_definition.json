@@ -1,34 +1,36 @@
 {   
     "nemoh_project": {
-        "name": "PIT3_McNatt_Cylinder",
+        "name": "PIT3_test",
         "folder": "/home/cassandra/Documents/PFE_MOREnergy/Nemoh_myVersion/PIT3_E/wec_inputs",
         "mesh_filename": "Cylinder.dat",
         "mesh_type": "NEMOH",
         "run_bem": false
     },
     "single_body_definition": {
-        "modes": [[1,1,0,0,0.0,0.0,0.0], [1,0,0,1,0.0,0.0,0.0]],
-        "frequency": {
-            "_comment": "(format RAD [rad/s] or HZ [1/s])",
+        "modes": [[1,1,0,0,0.0,0.0,0.0], [1,0,1,0,0.0,0.0,0.0], [1,0,0,1,0.0,0.0,0.0], [2,1,0,0,0.0,0.0,0.0], [2,0,1,0,0.0,0.0,0.0], [2,0,0,1,0.0,0.0,0.0]],
+        "spectral_param": {
+            "_comment": "(format w [rad/s], f [Hz=1/s], T [s], k [1/m] or L [m])",
             "min": 0.01,
-            "max": 2.5,
-            "number": 10,
-            "format": "RAD"
+            "max": 0.5,
+            "number": 3,
+            "format": "f"
         },
         "direction": {
             "_comment": "min and max must be 0 and 360.0 DEG. (format DEG or RAD)",
             "min": 0.0,
             "max": 360.0,
-            "number": 11,
+            "number": 1,
             "format": "DEG"
         },
-        "water_depth": 16.67,
+        "water_depth": 20,
         "cylinder": {
             "_comment": "Radius should be at least 1 panel larger than the body mesh.",
             "radius": 5.1,
             "azimuthal_discretization": 32,
             "depth_discretization": 20
-        }
+        },
+        "comment" : " 0 GAUSS ELIM; 1 LU DECOMP; 2 GMRES",
+        "solver" : 1
     },
     "farm_definition": {
         "Configuration" : false,
@@ -45,13 +47,24 @@
             "number": 1,
             "format": "DEG"
         },
-        "RAO" : false,
-        "Kochin" :false,
-        "K_param":[21, 0.0, 360.0],
-        "FS_param" : [0, 30, 92, 30],
-        "Evanescent" : false,
-        "Ne_modes" : 1, 
+        "comment_RAO": "RAO calculation running only with 6 DOF",
+        "RAO" : true,
+        "Ne_modes" : 0, 
+        "Kochin": {
+            "_comment": "(format DEG or RAD)",
+            "min": 0.0,
+            "max": 360.0,
+            "number": 0,
+            "format": "DEG"
+        },
+        "Free_surface": {
+            "Nx": 0,
+            "Ny": 30,
+            "Lx": 92,
+            "Ly": 30
+        },
         "_comment": "Output Type (format DAT or H5F)",
-        "Output_type" : "DAT"
+        "Output_type" : "DAT",
+        "Plot_DOF" : []
     }
 }

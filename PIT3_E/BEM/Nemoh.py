@@ -30,7 +30,7 @@ def InputHydro(directory, coord) :
             f.write('{:} {:} {:}		! CoG\n'.format(coord[nb, 0], coord[nb, 1], 0.0))
     return directory
 
-def InputDynamics(directory, meshes, modes, freq, directions, depth, FieldPoints) :
+def InputDynamics(directory, meshes, modes, freq, directions, depth, FieldPoints, solver) :
     """
     Generate input files for further running of Nemoh preProcessor.exe,
     Solver.exe and postProcessor.exe.
@@ -51,6 +51,7 @@ def InputDynamics(directory, meshes, modes, freq, directions, depth, FieldPoints
     depth (float): water depth.
     FieldPoints (list): [(float) radius of the cylinder, (int) number of azimuths,
                         (int) number of axial z-coordinates]
+    solver (integer) : type solver for Nemoh resolution
     """
     #
     Nb = len(modes)
@@ -79,7 +80,7 @@ def InputDynamics(directory, meshes, modes, freq, directions, depth, FieldPoints
     with open(_j(directory,'input_solver.txt'), 'w') as f :
         f.write('2				! Gauss quadrature (GQ) surface integration, N^2 GQ Nodes, specify N(1,4)\n')
         f.write('0.001			! eps_zmin for determine minimum z of flow and source points of panel, zmin=eps_zmin*body_diameter\n')
-        f.write('1 				! 0 GAUSS ELIM.; 1 LU DECOMP.: 2 GMRES	!Linear system solver\n')
+        f.write('{:} 				! 0 GAUSS ELIM.; 1 LU DECOMP.: 2 GMRES	!Linear system solver\n'.format(solver))
         f.write('10 1e-5 1000  	! Restart parameter, Relative Tolerance, max iter -> additional input for GMRES')
     
     with open(_j(directory,'Hydro.txt'), 'w') as f :

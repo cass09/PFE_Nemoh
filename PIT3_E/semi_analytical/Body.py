@@ -220,3 +220,7 @@ class Body(object):
                         for j in range(len(AS[0, :, 0])):  # Loop over the forces x bodies
                             AS_file.write(f" {cmath.phase(AS[i, j, k]):.6e}  ")  # Absolute value of Fe
                         AS_file.write("\n")
+        with open(os.path.join(directory,f"Data_waves.dat"), "w") as f:
+            f.write(f"w (rad/s) - k (m^-1) - L or lambda (m) - T (s) - f (Hz)\n  ")
+            for i, value in enumerate(w) : 
+                f.write(f"{value:8.4f}  {self.wnumber[i]:8.4f}    {2*pi/self.wnumber[i]:8.4f}     {2*np.pi/value:8.4f}  {value/(2*np.pi):8.4f}\n  ")

@@ -1558,3 +1558,8 @@ run_BEM_cylinder_Nb1_Mesh5:
 	$(MAKE) -C $(testdir)/BEM_cylinder_Nb1_Mesh5/ run
 clean_BEM_cylinder_Nb1_Mesh5:
 	$(MAKE) -C $(testdir)/BEM_cylinder_Nb1_Mesh5/ clean
+.PHONY: run_BEM_K_FS_Nb1 clean_BEM_K_FS_Nb1
+run_BEM_K_FS_Nb1:
+	$(MAKE) -C $(testdir)/BEM_K_FS_Nb1/ run
+clean_BEM_K_FS_Nb1:
+	$(MAKE) -C $(testdir)/BEM_K_FS_Nb1/ clean

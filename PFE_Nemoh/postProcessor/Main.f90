@@ -103,12 +103,14 @@
 
     IF (inpNEMOHCAL%OptOUTPUT%Kochin%Switch.GT.1 .and. inpNEMOHCAL%OptOUTPUT%Freesurface%Switch.GT.1) THEN
         Switch_Plot_WaveElevation=1
+        WRITE(*,*) ' -> Calcul Free surface from Kochin '
     END IF
    CALL Initialize_Plot_WaveElevation(Switch_Plot_WaveElevation,TRIM(ID%ID)//'/Nemoh.cal')
    IF (Switch_Plot_WaveElevation.GT.1 ) THEN
 !       This function is not completely develop only produce incident wave elevation
 !       Kochin coefficients for diffraction and radiation is not yet post-processed
-       CALL Plot_WaveElevation(ID,Environment,1,1,RAOs,Results)
+       CALL Plot_ETA(ID,Environment,RAOs, Results)
+    !    CALL Plot_WaveElevation(ID,Environment,1,1,RAOs,Results)
    END IF
 
 !

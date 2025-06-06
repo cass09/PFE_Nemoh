@@ -74,22 +74,17 @@ def transfers(water_depth,
     targ_order = int((len(directions)-1)/2)
     act_order = np.zeros((len(periods), 2), dtype=int)
     decimals = np.zeros((len(periods), 2), dtype=int)
-    if Evanescent :
-        diffmat = np.zeros((len(periods), (2*targ_order+1)*(Nmodes_E+1), (2*targ_order+1)*(Nmodes_E+1)), dtype=complex)
-        frcmat = np.zeros((len(periods), (2*targ_order+1)*(Nmodes_E+1), fex.shape[-1]), dtype=complex)
-        b_s_rad = np.zeros((len(periods), fex.shape[-1], (2*targ_order+1)*Nmodes_E), dtype=complex)
-        b_s_scat = np.zeros((len(periods), vpot_scat.shape[1], (2*targ_order+1)*Nmodes_E), dtype=complex)
-        coef_rad = np.zeros((len(periods), fex.shape[-1], (2*targ_order+1)*(1+Nmodes_E)), dtype=complex)
-        coef_scat = np.zeros((len(periods), vpot_scat.shape[1], (2*targ_order+1)*(1+Nmodes_E)), dtype=complex)
-    
-    else :
-        diffmat = np.zeros((len(periods), 2*targ_order+1, 2*targ_order+1), dtype=complex)
-        frcmat = np.zeros((len(periods), 2*targ_order+1, fex.shape[-1]), dtype=complex)
+    diffmat = np.zeros((len(periods), 2*targ_order+1, 2*targ_order+1), dtype=complex)
+    diffmat_E = np.zeros((len(periods), (2*targ_order+1)*Nmodes_E, (2*targ_order+1)*Nmodes_E), dtype=complex)
+    frcmat = np.zeros((len(periods), 2*targ_order+1, fex.shape[-1]), dtype=complex)
+    frcmat_E = np.zeros((len(periods), (2*targ_order+1)*Nmodes_E, fex.shape[-1]), dtype=complex)
     a_s_rad = np.zeros((len(periods), fex.shape[-1], 2*targ_order+1), dtype=complex)
     a_s_scat = np.zeros((len(periods), vpot_scat.shape[1], 2*targ_order+1), dtype=complex)
+    b_s_rad = np.zeros((len(periods), fex.shape[-1], (2*targ_order+1)*Nmodes_E), dtype=complex)
+    b_s_scat = np.zeros((len(periods), vpot_scat.shape[1], (2*targ_order+1)*Nmodes_E), dtype=complex)
     dirs, modes = np.meshgrid(directions, range(-targ_order, targ_order+1),
                               indexing='ij', sparse=True)
-        
+    
     wave_number_e=WNumber_E(periods, water_depth, Nmodes_E)
     for ind, per in enumerate(periods):
         wave_cond = (water_depth, 2.*np.pi/per, WNumber(per, water_depth))
@@ -106,53 +101,71 @@ def transfers(water_depth,
         if convention == 'N':
             a_i_plane = np.exp(1j*modes*(np.pi/2.-dirs))
             if Evanescent : 
-                a_i_plane_E = np.zeros((a_i_plane.shape[0], a_i_plane.shape[1] * (Nmodes_E+1)), dtype=complex)
-                # print(a_i_plane.shape, a_i_plane_E.shape)
-                a_i_plane_E[:, 0:a_i_plane.shape[1]] = a_i_plane
-                for l in range(1, Nmodes_E+1):
+                a_i_plane_E = np.zeros((a_i_plane.shape[0], a_i_plane.shape[1] * Nmodes_E), dtype=complex)
+                for l in range(Nmodes_E):
                     start = l * a_i_plane.shape[1]
                     end = start + a_i_plane.shape[1]
                     a_i_plane_E[:, start:end] = a_i_plane
                     # a_i_plane_E[:, start:end] = 0
         else:
             a_i_plane = np.exp(-1j*modes*(np.pi/2.+dirs))
-
-        if not Evanescent :
-            diffmat[ind] = np.linalg.lstsq(a_i_plane, a_s_scat[ind], rcond=None)[0]
-            frcmat[ind] = np.linalg.lstsq(a_i_plane, fex[ind], rcond=None)[0]
-            act_order[ind, 0], decimals[ind, 0] = max_trunc_order(a_s_scat[ind], targ_order, tol)
-            act_order[ind, 1], decimals[ind, 1] = max_trunc_order(a_s_rad[ind], targ_order, tol)
-    
-        else : 
-            coef_rad[ind, :, :2*targ_order+1]=a_s_rad[ind, :, :]
-            coef_scat[ind, :, :2*targ_order+1]=a_s_scat[ind, :, :]
-            coef_rad[ind, :, 2*targ_order+1:(2*targ_order+1)* (1 + Nmodes_E)]=b_s_rad[ind, :, :]
-            coef_scat[ind, :, 2*targ_order+1:(2*targ_order+1)* (1 + Nmodes_E)]=b_s_scat[ind, :, :]
-        
-            diffmat[ind] = np.linalg.lstsq(a_i_plane_E, coef_scat[ind], rcond=None)[0]
-            frcmat[ind] = np.linalg.lstsq(a_i_plane_E, fex[ind], rcond=None)[0]
-            act_order[ind, 0], decimals[ind, 0] = max_trunc_order(coef_scat[ind], targ_order, tol)
-            act_order[ind, 1], decimals[ind, 1] = max_trunc_order(coef_rad[ind], targ_order, tol)
-    
-            with open("D.dat", 'w') as f:
-                for row in diffmat[0]:
-                    line = "\t".join(f"{val.real:.6e}+{val.imag:.6e}j" for val in row)
-                    f.write(line + "\n")
+        diffmat[ind] = np.linalg.lstsq(a_i_plane, a_s_scat[ind], rcond=None)[0]
+        frcmat[ind] = np.linalg.lstsq(a_i_plane, fex[ind], rcond=None)[0]
+        if Evanescent : 
+            diffmat_E[ind] = np.linalg.lstsq(a_i_plane_E, b_s_scat[ind], rcond=None)[0]
+            frcmat_E[ind] = np.linalg.lstsq(a_i_plane_E, fex[ind], rcond=None)[0]
+        # find maximum truncation order
+        act_order[ind, 0], decimals[ind, 0] = max_trunc_order(a_s_scat[ind], targ_order, tol)
+        act_order[ind, 1], decimals[ind, 1] = max_trunc_order(a_s_rad[ind], targ_order, tol)
 
     # Shrink G, D and AR according to the truncation order Nm
     ini = targ_order-act_order.max()
     fin = ini+2*act_order.max()+1
-    # print(diffmat.shape, ini, fin)
-    # print(act_order.shape, act_order)
+
+    # print(diffmat.shape, diffmat[0])
     if Evanescent : 
-        order=act_order # use only in Interaction for MB reduction (not done when E)
-        act_order[:]=targ_order
-        return (diffmat.round(decimals.max()),
-                frcmat.round(decimals.max()),
+        # Matrice réduite de D_e
+        diffmat_E_reduced = np.zeros((len(periods), (2*act_order.max()+1)*Nmodes_E, (2*act_order.max()+1)*Nmodes_E), dtype=complex)
+        frcmat_E_reduced = np.zeros((len(periods), (2*act_order.max()+1)*Nmodes_E, fex.shape[-1]), dtype=complex)
+        # On coupe bloc par bloc
+        for t in range(len(periods)):
+            for i in range(Nmodes_E):
+                block_f= frcmat_E[t, i*(2*targ_order+1):(i+1)*(2*targ_order+ 1), :]
+                frcmat_E_reduced[t, i*(2*act_order.max()+1):(i+1)*(2*act_order.max()+1), :] = block_f[ini:fin, :]
+                for j in range(Nmodes_E):
+                    block = diffmat_E[t, i*(2*targ_order+1):(i+1)*(2*targ_order+ 1), j*(2*targ_order+ 1):(j+1)*(2*targ_order+1)]
+                    diffmat_E_reduced[t, i*(2*act_order.max()+1):(i+1)*(2*act_order.max()+1), j*(2*act_order.max()+1):(j+1)*(2*act_order.max()+1)] = block[ini:fin, ini:fin]
+
+        # Matrice D global = progressive + evanescent 
+        Nm_red=(2*act_order.max()+1)
+        D_global = np.zeros((len(periods), Nm_red*(1+Nmodes_E), Nm_red*(1+Nmodes_E)), dtype=complex)
+        G_global = np.zeros((len(periods), Nm_red*(1+Nmodes_E), fex.shape[-1]), dtype=complex)
+        coef_rad = np.zeros((len(periods), fex.shape[-1], (2*targ_order+1)*(1+Nmodes_E)), dtype=complex)
+        coef_scat = np.zeros((len(periods), vpot_scat.shape[1], (2*targ_order+1)*(1+Nmodes_E)), dtype=complex)
+        for t in range(len(periods)):
+            # Partie centrale : D
+            D_global[t, :Nm_red, :Nm_red] = diffmat[t]
+            G_global[t, :Nm_red, :] = frcmat[t]
+            coef_rad[t, :, :2*targ_order+1]=a_s_rad[t, :, :]
+            coef_scat[t, :, :2*targ_order+1]=a_s_scat[t, :, :]
+            # Partie évanescente : D_e
+            start = Nm_red
+            end = Nm_red * (1 + Nmodes_E)
+            D_global[t, start:end, start:end] = diffmat_E_reduced[t]
+            G_global[t, start:end, :] = frcmat_E_reduced[t]
+            coef_rad[t, :, 2*targ_order+1:(2*targ_order+1)* (1 + Nmodes_E)]=b_s_rad[t, :, :]
+            coef_scat[t, :, 2*targ_order+1:(2*targ_order+1)* (1 + Nmodes_E)]=b_s_scat[t, :, :]
+        
+        # with open("D.dat", 'w') as f:
+        #     for row in D_global[0]:
+        #         line = "\t".join(f"{val.real:.6e}+{val.imag:.6e}j" for val in row)
+        #         f.write(line + "\n")
+        return (D_global.round(decimals.max()),
+                G_global.round(decimals.max()),
                 coef_rad.round(decimals.max()),
                 coef_scat.round(decimals.max()),
                 act_order.max(axis=0),
-                order)
+                act_order)
     else : 
         return (diffmat[:, ini:fin, ini:fin].round(decimals.max()),
                 frcmat[:, ini:fin, :].round(decimals.max()),

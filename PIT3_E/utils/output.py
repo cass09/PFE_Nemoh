@@ -15,7 +15,7 @@ def WriteData(WECArr, directionMB, farm, distance, results, results_h5, Motion):
         type=farm["Type"] + "_"
     else :
         type=""
-    if farm["Evanescent"] : 
+    if farm['Ne_modes']>0 : 
         test= f"E{farm['Ne_modes']}_"
     else : 
         test=""
@@ -26,6 +26,10 @@ def WriteData(WECArr, directionMB, farm, distance, results, results_h5, Motion):
         madd_file_path = os.path.join(results, f"Global_{test}Madd_{type}{beta_value}d{distance:.2f}.dat")
         crad_file_path = os.path.join(results,  f"Global_{test}Crad_{type}{beta_value}d{distance:.2f}.dat")
 
+        
+        #################################################################
+        #################### Excitation Forces ##########################
+        #################################################################
         with open(fe_abs_file_path, "w") as fe_file, open(fe_phase_file_path, "w") as fe_phase_file, open(madd_file_path, "w") as madd_file, open(crad_file_path, "w") as crad_file:
             fe_file.write("Period   " + " Wave direction    ")
             fe_file.write(" Fe dof = body x force")
@@ -51,6 +55,9 @@ def WriteData(WECArr, directionMB, farm, distance, results, results_h5, Motion):
                     fe_phase_file.write("\n")
                 fe_phase_file.write("\n")
 
+        #################################################################
+        ################## Added Mass and Damping #######################
+        #################################################################
             N = len(WECArr.Madd[0, :, 0])  # N est la dimension de la matrice Madd
             madd_file.write("Period " + "Madd_{ij}" + "\n")
             for i, period in enumerate(w):
@@ -61,7 +68,6 @@ def WriteData(WECArr, directionMB, farm, distance, results, results_h5, Motion):
                     madd_file.write("\n")
 
             crad_file.write("Period " + "Crad_{ij}" + "\n")
-
             for i, period in enumerate(w):
                 for j in range(N):
                     crad_file.write(f"{period:.4f} ")  # Start with the period
@@ -69,6 +75,9 @@ def WriteData(WECArr, directionMB, farm, distance, results, results_h5, Motion):
                         crad_file.write(f" {WECArr.Crad[i, j, k]:.6e}  ")  # Crad values
                     crad_file.write("\n")
 
+        #################################################################
+        ########################### RAO #################################
+        #################################################################
         if farm['RAO'] :
             RAO_file_path = os.path.join(Motion,  f"Global_{test}RAO_{type}{beta_value}d{distance:.2f}.dat")
             with open(RAO_file_path, "w") as RAO_file:
@@ -85,39 +94,15 @@ def WriteData(WECArr, directionMB, farm, distance, results, results_h5, Motion):
                             RAO_file.write(f" {cmath.phase(WECArr.RAO[i, k, j]):.6e}  ")   
                         RAO_file.write("\n")
 
-        if farm['Kochin'] :
-            # KochinR_file_path = os.path.join(Motion,  f"Global_{test}KochinR_{type}{beta_value}d{distance:.2f}.dat")
-            # with open(KochinR_file_path, "w") as KR_file:
-
-            #     KR_file.write(" Frecency   "+"amplitude for each dof x body  " +"phase for each dof x body")
-            #     KR_file.write("\n")
-            #     for i, period in enumerate(w):
-            #         KR_file.write(f"w={period:.4f}  \n  ")  # Start with the period
-            #         for theta in range(len(WECArr.KochinR[0, 0, :])):   
-            #             for dof in range(len(WECArr.KochinR[0, :, 0])): 
-            #                 KR_file.write(f" {np.abs(WECArr.KochinR[i, dof, theta]):.6e}  ")     
-            #             for dof in range(len(WECArr.KochinR[0, :, 0])): 
-            #                 KR_file.write(f" {cmath.phase(WECArr.KochinR[i, dof, theta]):.6e}  ")   
-            #             KR_file.write("\n")
-
-            # KochinS_file_path = os.path.join(Motion,  f"Global_{test}KochinS_{type}{beta_value}d{distance:.2f}.dat")
-            # with open(KochinS_file_path, "w") as KS_file:
-
-            #     KS_file.write(" Frecency   "+"amplitude for each wave direction  " +"phase for each wave direction")
-            #     KS_file.write("\n")
-            #     for i, period in enumerate(w):
-            #         KS_file.write(f"w={period:.4f}  \n  ")  # Start with the period
-            #         for theta in range(len(WECArr.KochinS[0, 0, :])):   
-            #             for dir in range(len(WECArr.KochinS[0, :, 0])): 
-            #                 KS_file.write(f" {np.abs(WECArr.KochinS[i, dir, theta]):.6e}  ")      
-            #             for dir in range(len(WECArr.KochinS[0, :, 0])): 
-            #                 KS_file.write(f" {cmath.phase(WECArr.KochinS[i, dir, theta]):.6e}  ")   
-            #             KS_file.write("\n")
-
-            thetaK = np.linspace(farm['K_param'][1],
-                        farm['K_param'][2],
-                        farm['K_param'][0])
-            thetaK=thetaK*np.pi/180
+        #################################################################
+        ######################### Kochin ################################
+        #################################################################
+        if farm['Kochin']['number']>0 :
+            thetaK = np.linspace(farm['Kochin']['min'],
+                        farm['Kochin']['max'],
+                        farm['Kochin']['number'])
+            if farm['Kochin']['format']=='DEG' :
+                thetaK=thetaK*np.pi/180
             ind_pb=1
             for i, period in enumerate(w): 
                 for dir in range(len(WECArr.KochinS[0, :, 0])):
@@ -143,12 +128,15 @@ def WriteData(WECArr, directionMB, farm, distance, results, results_h5, Motion):
                             K_file.write("\n")
                     ind_pb=ind_pb+1
 
-        if farm['FS_param'][0] != 0 :
+        #################################################################
+        ###################### Free surface #############################
+        #################################################################
+        if farm['Free_surface']['Nx'] > 0 :
             ind_pb=1
-            Nx=farm['FS_param'][0]
-            Ny=farm['FS_param'][1]
-            Lx=farm['FS_param'][2]
-            Ly=farm['FS_param'][3]
+            Nx=farm['Free_surface']['Nx']
+            Ny=farm['Free_surface']['Ny']
+            Lx=farm['Free_surface']['Ly']
+            Ly=farm['Free_surface']['Ly']
             x = np.linspace(-Lx/2, Lx/2, Nx)
             y = np.linspace(-Ly/2, Ly/2, Ny)
             for ind, period in enumerate(w): 
@@ -178,6 +166,7 @@ def WriteData(WECArr, directionMB, farm, distance, results, results_h5, Motion):
                                 FS_file.write(f" {(WECArr.ETA_R[ind, dir, i,j]).imag:.6e}  ")   
                                 FS_file.write("\n")
                     ind_pb=ind_pb+1
+                    
             ind_pb=1  
             for ind, period in enumerate(w): 
                 for dir in range(len(WECArr.ETA[0, :, 0, 0])):

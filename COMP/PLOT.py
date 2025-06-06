@@ -271,15 +271,160 @@ def plot_many_error_RAO(config, indices_coef, titre, test) :
     plt.savefig(f"Errors_{config}_RAO_phase{indice}.png")
     plt.close()  # Ferme la figure pour éviter trop d'ouvertures
 
+def plot_E_Fex_RAO(nom, config, vect_dof, titre, Ne) :
+    linestyle_cycle = itertools.cycle(['-', '--', '-.', ':'])
+    vivid_colors = [
+    "#e6194b",  # rouge vif
+    "#3cb44b",  # vert vif
+    "#0082c8",  # bleu vif
+    "#f58231",  # orange
+    "#911eb4",  # violet
+]
+    # colors = itertools.cycle(plt.rcParams['axes.prop_cycle'].by_key()['color'])
+    colors = itertools.cycle(vivid_colors)
+    markers = itertools.cycle(['o', 's', 'D', 'v', '*', '^'])
+
+    plt.figure(figsize=(8, 6))
+    for idx, E in enumerate(Ne):
+        test=f"E{E}_"
+        filename = f"EcartsRelatifs_{test}{nom}_abs_{config}.dat" 
+        data = np.loadtxt(filename, delimiter=None, skiprows=1) 
+        d = data[:, 0]    
+        for i, dof in enumerate(vect_dof) : 
+            plt.plot(d, data[:,i],color=next(colors),
+                marker=next(markers),
+                linestyle=next(linestyle_cycle),
+                linewidth=1,
+                markersize=4,
+                alpha=0.9, label=f'Ne={E} - DOF={dof}')
+    filename = f"EcartsRelatifs_{nom}_abs_{config}.dat" 
+    data = np.loadtxt(filename, delimiter=None, skiprows=1) 
+    d = data[:, 0]
+    for i, dof in enumerate(vect_dof) : 
+        plt.plot(d, data[:,i],color="black",
+            marker=next(markers),
+            linestyle=next(linestyle_cycle),
+            linewidth=1,
+            markersize=4,
+            alpha=0.9, label=f'Ne=0 - DOF={dof}')
+    plt.xscale("log", base=2) 
+    plt.xlabel("Distance")
+    plt.ylabel(f"|{nom}|")
+    plt.title(f"Relative errors of |{nom}| depending on the distance \n ({titre})")
+    plt.legend()
+    plt.grid()
+    # print(i+1, data[:,i+1])
+    # Sauvegarder en PDF
+    plt.savefig(f"Errors_E_{config}_{nom}_abs{vect_dof}.png")
+    plt.close()  # Ferme la figure pour éviter trop d'ouvertures
+
+    plt.figure(figsize=(8, 6))
+    for idx, E in enumerate(Ne):
+        test=f"E{E}_"
+        filename2 = f"EcartsRelatifs_{test}{nom}_ph_{config}.dat" 
+        data2 = np.loadtxt(filename2, delimiter=None, skiprows=1) 
+        for i, dof in enumerate(vect_dof) : 
+            plt.plot(d, data2[:,i], color=next(colors),
+                marker=next(markers),
+                linestyle=next(linestyle_cycle),
+                linewidth=0.9,
+                markersize=4,
+                alpha=0.9, label=f'Ne={E} - DOF={dof}')
+    filename2 = f"EcartsRelatifs_{nom}_ph_{config}.dat" 
+    data2 = np.loadtxt(filename2, delimiter=None, skiprows=1) 
+    for i, dof in enumerate(vect_dof) : 
+        plt.plot(d, data2[:,i], color="black",
+            marker=next(markers),
+            linestyle=next(linestyle_cycle),
+            linewidth=0.9,
+            markersize=4,
+            alpha=0.9, label=f'Ne=0 - DOF={dof}')
+    plt.xscale("log", base=2) 
+    plt.xlabel("Distance")
+    plt.ylabel(f"phase {nom}")
+    # plt.ylim(0, 0.3)
+    plt.title(f"Relative errors of {nom} phase depending on the distance \n({titre})")
+    plt.legend()
+    plt.grid()
+
+    # Sauvegarder en PDF
+    plt.savefig(f"Errors_E_{config}_{nom}_phase{vect_dof}.png")
+    plt.close()  # Ferme la figure pour éviter trop d'ouvertures
+
+def plot_E_RAD(nom, config, coefs, titre, Ne) :
+    if nom=="Damping":
+        RAD="CA"
+    else :
+        RAD="CM"
+    linestyle_cycle = itertools.cycle(['-', '--', '-.', ':'])
+    # colors = itertools.cycle(plt.rcParams['axes.prop_cycle'].by_key()['color'])
+    vivid_colors = [
+    "#e6194b",  # rouge vif
+    "#3cb44b",  # vert vif
+    "#0082c8",  # bleu vif
+    "#f58231",  # orange
+    "#911eb4",  # violet
+]
+    # colors = itertools.cycle(plt.rcParams['axes.prop_cycle'].by_key()['color'])
+    colors = itertools.cycle(vivid_colors)
+    markers = itertools.cycle(['o', 's', 'D', 'v', '*', '^'])
+    for idx, E in enumerate(Ne):
+        file_path = f'EcartsRelatifs_E{E}_{RAD}_{config}.dat'  # Remplacez par le chemin de votre fichier
+        matrices, distances = load_matrices_from_file(file_path)
+        for nb_coef in coefs : 
+            # print(nb_coef)
+            i=nb_coef[0]
+            j=nb_coef[1]
+            coef_values = []
+            dist_values = []
+            for matrix, dist in zip(matrices, distances):
+                coef_values.append(matrix[i-1, j-1])  # Récupérer le coefficient M(i,j)
+            for k in range(0, 5):
+                dist_values.append(2**k)  # Ajouter la distance associée
+            # Tracer le graphique
+            plt.plot(dist_values, coef_values, color=next(colors),
+                marker=next(markers),
+                linestyle=next(linestyle_cycle),
+                linewidth=1,
+                markersize=4,
+                alpha=0.9, label=f'Ne={E} - M({i},{j})')
+    file_path = f'EcartsRelatifs_{RAD}_{config}.dat'  # Remplacez par le chemin de votre fichier
+    matrices, distances = load_matrices_from_file(file_path)
+    for nb_coef in coefs : 
+        # print(nb_coef)
+        i=nb_coef[0]
+        j=nb_coef[1]
+        coef_values = []
+        dist_values = []
+        for matrix, dist in zip(matrices, distances):
+            coef_values.append(matrix[i-1, j-1])  # Récupérer le coefficient M(i,j)
+        for k in range(0, 5):
+            dist_values.append(2**k)  # Ajouter la distance associée
+        # Tracer le graphique
+        plt.plot(dist_values, coef_values, color='black',
+            marker=next(markers),
+            linestyle=next(linestyle_cycle),
+            linewidth=1,
+            markersize=4,
+            alpha=0.9, label=f'Ne=0 - M({i},{j})')
+    plt.xscale("log", base=2) 
+    plt.xlabel('Distance (m)')
+    plt.ylabel(f'{nom}')
+    plt.title(f'{nom}_{config} ')
+    plt.grid(True)
+    plt.legend()
+    plt.savefig(f"Errors_E_{config}_{nom}{coefs}.png")
+    plt.close()  # Ferme la figure pour éviter trop d'ouvertures
 
 config="Nb2_X"
 test=""
 All_error=False
-Fex_error=True
-C_error=True
-RAO_error=True
+Fex_error=False
+C_error=False
+RAO_error=False
+E_error=True
 # i=3
-titre=f"Cylinder - {config}, Nw=20, Nbeta=11, Ndof=6, Ndir=1"
+titre=f"barge - {config}, Nw=20, Nbeta=11, Ndof=6, Ndir=1"
 
 
 if All_error:
@@ -309,3 +454,22 @@ for j, i in enumerate([1, 3, 5]) :
         # coefs=[[5, 11], [5, 9], [9, 11]]
         plot_many_coefficient_vs_distance(matrices, coefs, "Damping", config)
         plot_many_coefficient_vs_distance(matrices2, coefs, "Added_Mass", config)
+
+if E_error :
+    Ne=[1, 6, 12]
+    dof=[1, 3]
+    print("--- Error for Ne=", Ne)
+    print("--- Fex for ", dof)
+    for idx, dof in enumerate(dof) :
+        plot_E_Fex_RAO("Fex", config, [dof, dof+6], titre, Ne)
+        # plot_E_Fex_RAO("RAO", config, [dof, dof+6], titre, Ne)
+    # for c, E in enumerate(Ne) :
+    #     file_path = f'EcartsRelatifs_E{E}_CA_{config}.dat'  # Remplacez par le chemin de votre fichier
+    #     file_path2 = f'EcartsRelatifs_E{E}_CM_{config}.dat'  # Remplacez par le chemin de votre fichier
+    #     matrices, distances = load_matrices_from_file(file_path)
+    #     matrices2, distances = load_matrices_from_file(file_path2)
+    indices=[[[1, 1],[3, 3]], [[3, 9]]]
+    print("--- RAD for ", indices)
+    for idx, coefs in enumerate(indices):
+        plot_E_RAD("Added_Mass", config, coefs, titre, Ne)
+        plot_E_RAD("Damping", config, coefs, titre, Ne)

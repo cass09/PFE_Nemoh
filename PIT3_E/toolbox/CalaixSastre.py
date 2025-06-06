@@ -359,8 +359,9 @@ if __name__ == '__main__' :
 
     L = 1
     # period = 2*pi/0.3
-    freq = np.linspace(0.3, 2, 20)
-    period = 2*pi/freq
+    freq = np.linspace(0.5, 1, 10)
+    # period = 2*pi/freq
+    period =1/freq
     depth = 20.
     k = WNumber(period, depth)
     Le = 2*pi/WNumber_E(period, depth, L, step = .001, kmax = 1000)
@@ -385,6 +386,6 @@ if __name__ == '__main__' :
     # plt.close()
 
     with open(f"Data_progressive_waves.dat", "w") as f:
-            f.write(f"frequence - nombre d'onde - longueur d'onde  \n  ")
+            f.write(f"frequence(rad) - nombre d'onde - longueur d'onde  \n  ")
             for i, w in enumerate(freq) : 
                 f.write(f"{w:8.4f}     {k[i]:8.4f}    {2*pi/k[i]:8.4f}  \n  ")

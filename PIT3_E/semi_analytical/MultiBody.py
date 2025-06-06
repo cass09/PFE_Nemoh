@@ -142,11 +142,10 @@ class MultiBody(object):
             dimk = 2*Nmk+1
             colT = np.array(np.arange(0,dimk*(Ne+1)*Nb,dimk*(Ne+1)).tolist()*dimk*(Ne+1),dtype=int)+np.linspace(0,dimk*(Ne+1),dimk*(Ne+1)*Nb,endpoint=False,dtype=int)
             colAR = (np.array([range(dimk*(Ne+1))])+(Nm-Nmk)*(Ne+1)).reshape(-1)
-            # print("dimi :", dimk, "Nm :", Nm, "Nmi :", Nmk, "Ne+1:", Ne+1)
-            # print("col :", colT)
-            # print("colAR :", colAR)
-            # print("T[k][colT]:", T[k].shape, T[k][colT].shape)
-            # print("AR_iso[k][:,colAR] :", AR_iso[k].shape, AR_iso[k][:,colAR].shape)
+            # print("T[k].shape:", T[k].shape)
+            # print("colT.shape:", colT.shape)
+            # print("colT[:10]:", colT[:10])
+            # print("colAR[:10]:", colAR[:10])
             T_re = np.reshape(T[k][colT],(dimk*(Ne+1),dimk*(Ne+1)*Nb**2)) # remember that T is already transposed so we are already getting T columns
             AR = np.dot(AR_iso[k][:,colAR],T_re) # each row of aR is constant dof.
             AR = np.reshape(AR,(dof,Nb,Nb*dimk*(Ne+1)))
