@@ -108,7 +108,7 @@ CONTAINS
     END SUBROUTINE
 
 !-- SUBROUTINE ComputeDiffractionCondition
-  SUBROUTINE ComputeDiffractionCondition(Mesh,w,beta,Environment,PRESSURE,NVEL)
+  SUBROUTINE ComputeDiffractionCondition(IT, Mesh,w,beta,mode, Environment,PRESSURE,NVEL)
 
     USE Constants !, only: PI
     USE MEnvironment
@@ -118,6 +118,7 @@ CONTAINS
 !   Inputs/outputs
     TYPE(TMesh)             :: Mesh
     REAL                    :: w,beta           ! Wave period, direction and wavenumber
+    INTEGER                 :: mode, IT          ! circular mode, IT running
     TYPE(TEnvironment)      :: Environment      ! Environment
     COMPLEX,DIMENSION(*)    :: PRESSURE,NVEL    ! Pressure and normal velocities on panels
 !   Locals
@@ -132,7 +133,11 @@ CONTAINS
 !   Compute potential and normal velocities
     DO i=1,2**Mesh%Isym*Mesh%Npanels
         IF (i.LE.Mesh%Npanels) THEN
-           CALL Compute_Wave(kwave,w,beta,Mesh%XM(1,i),Mesh%XM(2,i),Mesh%XM(3,i),Phi,p,Vx,Vy,Vz,Environment)
+            IF (IT==0) THEN
+                CALL Compute_Wave(kwave,w,beta,Mesh%XM(1,i),Mesh%XM(2,i),Mesh%XM(3,i),Phi,p,Vx,Vy,Vz,Environment)
+            ELSE 
+                CALL Compute_WaveIT(kwave,w,beta,mode, Mesh%XM(1,i),Mesh%XM(2,i),Mesh%XM(3,i),Phi,p,Vx,Vy,Vz,Environment)
+            END IF
            IF (Mesh%XM(3,i).lt.0.) THEN !if ZMN<0, dont calculate on the lid meshes (for irregular freq) by RK
             PRESSURE(i)=p
             NVEL(i)=-(Vx*Mesh%N(1,i)+Vy*Mesh%N(2,i)+Vz*Mesh%N(3,i))
@@ -141,7 +146,11 @@ CONTAINS
            NVEL(i)=0                   !forcing to be zero at lid panels for the extended BIE irreg freq. removal
            END IF
         ELSE
-           CALL Compute_Wave(kwave,w,beta,Mesh%XM(1,i-Mesh%Npanels),-Mesh%XM(2,i-Mesh%Npanels),Mesh%XM(3,i-Mesh%Npanels),Phi,p,Vx,Vy,Vz,Environment)
+            IF (IT==0) THEN
+                CALL Compute_Wave(kwave,w,beta,Mesh%XM(1,i-Mesh%Npanels),-Mesh%XM(2,i-Mesh%Npanels),Mesh%XM(3,i-Mesh%Npanels),Phi,p,Vx,Vy,Vz,Environment)
+            ELSE 
+                CALL Compute_WaveIT(kwave,w,beta,mode,Mesh%XM(1,i-Mesh%Npanels),-Mesh%XM(2,i-Mesh%Npanels),Mesh%XM(3,i-Mesh%Npanels),Phi,p,Vx,Vy,Vz,Environment)
+            END IF
            IF (Mesh%XM(3,i-Mesh%Npanels).lt.0.) THEN !if ZMN<0, dont calculate on the lid meshes (for irregular freq) by RK
            PRESSURE(i)=p
            NVEL(i)=-(Vx*Mesh%N(1,i-Mesh%Npanels)-Vy*Mesh%N(2,i-Mesh%Npanels)+Vz*Mesh%N(3,i-Mesh%Npanels))

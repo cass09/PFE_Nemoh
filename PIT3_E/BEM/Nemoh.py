@@ -8,6 +8,7 @@ from glob import glob
 import os
 import shutil
 from toolbox.CalaixSastre import g, ro, execute
+from toolbox.BodyMesh import get_panel_centers_cylindrical
 from toolbox import mesh as _msh
 
 # Shortcuts
@@ -30,7 +31,7 @@ def InputHydro(directory, coord) :
             f.write('{:} {:} {:}		! CoG\n'.format(coord[nb, 0], coord[nb, 1], 0.0))
     return directory
 
-def InputDynamics(directory, meshes, modes, freq, directions, depth, FieldPoints, solver) :
+def InputDynamics(directory, meshes, modes, freq, directions, depth, FieldPoints, solver, sources) :
     """
     Generate input files for further running of Nemoh preProcessor.exe,
     Solver.exe and postProcessor.exe.
@@ -122,6 +123,7 @@ def InputDynamics(directory, meshes, modes, freq, directions, depth, FieldPoints
         f.write('1	            ! output freq type, 1,2,3=[rad/s,Hz,s]\n')
         f.write('--- Interaction Theory ---------------------------------------------------------------------------------------------------------------\n')
         f.write('{:} {:} {:}		! Field points calculation: radius of the cylinder (0 for no calculations), number of points in theta and number of points in z\n'.format(*FieldPoints))
+        f.write('{:} 0		! Field points calculation: radius of the cylinder (0 for no calculations), number of points in theta and number of points in z\n'.format(sources))
         f.write('0	                ! run Interaction Theory \n')
         f.write('--- QTF ---------------------------------------------------------------------------------------------------------------\n')
         f.write('0  				! QTF flag, 1 is calculated \n')
@@ -416,6 +418,51 @@ def ReadFieldPoints(directory, DOF, freq, Nd, FieldPoints, convention = 'N') :
         Radiation = np.conj(Radiation)
     return (Scattering, Radiation, radius, th, z)
 
+def ReadSources(directory, DOF, freq, Nd, meshfile, convention = 'N') :
+    """
+    Read sources terms from sources. Num.dat
+
+    directory (str): path where cylsurface. Num.dat.
+    DOF (int): Total number of generalized degrees of freedom.
+    freq (list): wave frequencies.
+    Nd (int): Total number of wave directions for ExcitationForce.tec.
+    FieldPoints (list): [(float) radius of the cylinder, (int) number of azimuths,
+                        (int) number of axial z-coordinates]
+    convention (str): 'N', default, for nemoh convention exp(-1j*omega*time) and
+                      'W' for wamit convention exp(1j*omega*time).
+    """
+    Nf = len(freq)
+    Np = DOF*Nf + Nd*Nf # Radiation + Scattering
+    # radius = FieldPoints[0]
+    # (Nth, Nz) = int(FieldPoints[1]), int(FieldPoints[2])
+    centers, areas=get_panel_centers_cylindrical(os.path.join(directory, '..', meshfile))
+    Npanels=len(centers)
+    Sources = np.zeros((Npanels, Np), dtype = complex)
+    # FieldPoints = np.zeros((Nth, Nz, 3))
+    for p in range(Np):
+        with open(_j(directory,'sources.{:05d}.dat'.format(p+1)), 'r') as f_prob :
+            for i in range(int(Npanels)):
+                    temp = np.array(f_prob.readline().split(),dtype = float)
+                    Sources[i,p] = temp[0]+1j*temp[1]
+    # rearrange Pressure into Radiation or Scattering
+    Scattering = np.zeros((Nf, Nd, Npanels), dtype = complex)
+    Radiation =  np.zeros((Nf, DOF, Npanels), dtype = complex)
+    ip = -1
+    for f in range(Nf):
+        for d in range(Nd):
+            ip +=1
+            Scattering[f,d,:] = Sources[:,ip].T
+        for dof in range(DOF):
+            ip +=1
+            Radiation[f,dof,:] = Sources[:,ip].T
+    # replace nan-values by zero
+    Scattering[np.isnan(Scattering)] = 0.
+    Radiation[np.isnan(Radiation)] = 0.
+    # radius = centers[:,0]
+    # theta = centers[:,1]
+    # z = centers[:,2]
+    return (Scattering, Radiation, centers, areas)
+
 def ReadStatics(directories, whichDOFs, whichFORCEs) :
     """
     Read Hydrostatic forces KH.dat, Inertia_hull.dat and Hydrostatics.dat
@@ -496,6 +543,9 @@ def ReadNemohcal(directory) :
                 if il <= 6 + Nb :
                     whichDOFb = list()
                     for ilbd , linebd in enumerate(f_N) :
+                        if ilbd == 0 :
+                            # BodyMesh = np.array(linebd.split('!')[0].split(), dtype = float)
+                            BodyMesh = linebd.split('!')[0].strip().strip('"')
                         if ilbd == 2 :
                             DOFb = int(linebd.split('!')[0])
                             DOF += DOFb
@@ -534,8 +584,10 @@ def ReadNemohcal(directory) :
                         directions = np.linspace(dmin, dmax, int(Nd))*pi/180
                     elif il == 6 + Nb + 12 :
                         FieldPoints = np.array(line.split('!')[0].split(), dtype = float)
+                    elif il == 6 + Nb + 13 :
+                        Method = np.array(line.split('!')[0].split(), dtype = float)
                         break
-    return (DOF, FORCE, freq, directions, FieldPoints, whichDOF, whichFORCE, WaterDepth)
+    return (DOF, FORCE, freq, directions, FieldPoints, BodyMesh, whichDOF, whichFORCE, WaterDepth, Method)
 
 def ReadNemohcal_mshs_mds(directory) :
     """

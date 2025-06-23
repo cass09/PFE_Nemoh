@@ -6,9 +6,10 @@ from math import pi
 import numpy as np
 from numpy.linalg import solve
 from scipy.special import jv, yv, kv
-from toolbox.CalaixSastre import len2
+from toolbox.CalaixSastre import len2, CylWaveField
 from glob import glob
 import os
+import cmath
 # Settings
 
 
@@ -147,8 +148,13 @@ class MultiBody(object):
             # print("colT[:10]:", colT[:10])
             # print("colAR[:10]:", colAR[:10])
             T_re = np.reshape(T[k][colT],(dimk*(Ne+1),dimk*(Ne+1)*Nb**2)) # remember that T is already transposed so we are already getting T columns
+            # print("T_re.shape:", T_re.shape)
+            # print("T", T[k])
+            # print("T_re", T_re)
             AR = np.dot(AR_iso[k][:,colAR],T_re) # each row of aR is constant dof.
+            # print("shape", AR.shape, AR_iso[k].shape)
             AR = np.reshape(AR,(dof,Nb,Nb*dimk*(Ne+1)))
+            # print("AR.shape", AR.shape)
             Fex_rad = np.zeros((dof,Nb,dof*Nb),dtype=complex)
             # Save amplitude coefficients
             if self.cylamplitude:
@@ -156,6 +162,7 @@ class MultiBody(object):
                     aRaux = np.zeros(AR.shape,dtype=complex)
             for i in range(dof):
                 aR = np.dot(np.dot(AR[i,:,:],D_array[k]),M_int[k])
+                # print("aR.shape", aR.shape)
                 # Save amplitude coefficients
                 if self.cylamplitude:
                     aRaux[i] = aR
@@ -371,9 +378,10 @@ class MultiBody(object):
             with open(os.path.join(directory,'Kh.dat'), 'r') as f_Kh :
                 Kh = np.loadtxt(f_Kh)
         RAO = np.zeros((Nfreq, Ndir, Ndof), dtype=complex)  
-
+        B_PTO=0
+        K_PTO=0
         for i in range(Nfreq):
-            mat_A = -(Mass + Madd[i,:,:]) * freq[i]**2 - 1j * freq[i] * Crad[i,:,:] + Kh  
+            mat_A = -(Mass + Madd[i,:,:]) * freq[i]**2 - 1j * freq[i] * (Crad[i,:,:]+B_PTO) + (Kh +K_PTO) 
             for beta in range(Ndir) : 
                 RAO[i,beta, :] = np.linalg.lstsq(mat_A, Fex[i, beta, :], rcond=None)[0]
 
@@ -382,49 +390,60 @@ class MultiBody(object):
     def Kochin(self, theta) : 
         aR=self.aR
         aS=self.aS
-        RAO=self.RAO
+        # RAO=self.RAO
         # print("Radiation")
         # print(len(self.aR), len(self.aR[0]), len(self.aR[0][0]), len(self.aR[0][0][0]), len(self.aR[1][0][0]))
         # print("Scattering")
         # print(len(self.aS), len(self.aS[0]), len(self.aS[0][0]), len(self.aS[1][0]))
-        
         freq = 2*pi/self.period
         Nfreq = freq.shape[0]
         Ndir = len(self.aS[0])
         Ndof = len(self.aR[0])
-        Nb=len(self.aR[0][0]) # 6*n bodies 
+        Nb=len(self.aR[0][0])  
         KochinR = np.zeros((Nfreq, Ndof*Nb, len(theta)), dtype=complex)
         KochinS = np.zeros((Nfreq, Ndir, len(theta)), dtype=complex)
         g=9.81
         for ind, w in enumerate(freq):
             NmR = len(aR[ind][0][0])
             NmS = len(aS[ind][0])
-            M_R=int((NmR-1)/2)
-            M_S=int((NmS-1)/2)
+            M_R=int((NmR-1)/(2*Nb))
+            M_S=int((NmS-1)/(2*Nb))
             for k, angle in enumerate(theta) :
-                for i, mode in enumerate(range(-M_R, M_R+1)):
-                    for body in range(Nb) :
-                        for dof in range(Ndof) :
-                            index_dof = body * Ndof + dof
-                            KochinR[ind, index_dof, k]+= (-1)**mode *(1j*w/g) *aR[ind][dof][body][i]*np.exp(1j*mode*angle)
-                            # KochinR[ind, index_dof, k]+= 1j*w/g *aR[ind][dof][body][i]*np.exp(1j*mode*angle)*RAO[ind,0,body]*np.pi/180
-                for i, mode in enumerate(range(-M_S, M_S+1)):
-                    for beta in range(Ndir) :
-                        KochinS[ind, beta, k]+= (-1)**mode *1j*w/g *aS[ind][beta][i]*np.exp(1j*mode*angle)
-        self.KochinR=KochinR
-        self.KochinS=KochinS
+                for body in range(Nb) :
+                    for dof in range(Ndof) :
+                        index_dof = body * Ndof + dof
+                        for mode in range(-M_R, M_R+1):
+                            for j in range(Nb):  
+                                idx_mode = j * (2*M_R+1) + (mode + M_R)  
+                            # KochinR[ind, index_dof, k]+= (-1j)**mode *(1j*w/g) *aR[ind][dof][body][i]*np.exp(1j*mode*angle)
+                                # KochinR[ind, index_dof, k]+= (1j)**mode  *aR[ind][dof][body][idx_mode]*np.exp(1j*mode*angle)
+                                KochinR[ind, index_dof, k]+= (1j)**mode *(1j*w/g)  *np.conj(aR[ind][dof][body][idx_mode])*np.exp(-1j*mode*angle)
+                for beta in range(Ndir) :
+                    for mode in range(-M_S, M_S+1):
+                        for j in range(Nb):  
+                            idx_mode = j * (2*M_S+1) + (mode + M_S)  
+                            KochinS[ind, beta, k]+= (1j)**mode*(1j*w/g)  *np.conj(aS[ind][beta][idx_mode])*np.exp(-1j*mode*angle)
+        scale=np.sqrt(2/np.pi)*np.exp(1j*np.pi/4)
+        # self.KochinR=np.sqrt(2/np.pi)*np.exp(1j*np.pi/4)*KochinR
+        self.KochinR=-KochinR/(4*np.pi)*scale
+        self.KochinS=-KochinS/(4*np.pi)*scale
+        
 
-
-    def FreeSurface(self, coord, Nx, Ny, Lx, Ly) : 
+    def FreeSurface(self, coord, Nx, Ny, Lx, Ly, Ne) : 
         aR=self.aR
+        AR_iso = self.Body.AR
+        # print("aR", len(aR), len(aR[0]), len(aR[0][0]), len(aR[0][0][0]))
+        # print("aR iso", AR_iso.shape)
         aS=self.aS
         k0=self.wnumber
+        kl=self.wnumber_E
+        depth=self.depth
         direction = self.dir
         freq = 2 * pi / self.period
         Nfreq = freq.shape[0]
-        Ndir = len(self.aS[0])
-        Ndof = len(self.aR[0])
-        Nb = len(self.aR[0][0]) 
+        Ndir = len(aS[0])
+        Ndof = len(aR[0])
+        Nb = len(aR[0][0]) 
         ETA = np.zeros((Nfreq, Ndir, Nx, Ny), dtype=complex)
         ETA_R = np.zeros((Nfreq, Ndof*Nb, Nx, Ny), dtype=complex)
         phiR = np.zeros((Nfreq, Nx, Ny), dtype=complex)
@@ -435,59 +454,175 @@ class MultiBody(object):
         x = np.linspace(-Lx/2, Lx/2, Nx)
         y = np.linspace(-Ly/2, Ly/2, Ny)
         X, Y = np.meshgrid(x, y, indexing='ij')  # (Nx, Ny)
-
         for ind, w in enumerate(freq):
+            print("w=", w)
+            # number of progressive modes M (max=5)
+            # can be lower for some frequencies
             NmR = len(aR[ind][0][0])
             NmS = len(aS[ind][0])
-            M_R = int((NmR - 1) / 2)
-            M_S = int((NmS - 1) / 2)
+            M_R = int((NmR/(Nb*(Ne+1)) - 1) / 2)
+            M_S = int((NmS/(Nb*(Ne+1)) - 1) / 2)
             k = k0[ind]
+            kll=kl[ind,:]
+            # loop on the bodies
             for body in range(Nb):
-                dx = X - coord[body, 0]
-                dy = Y - coord[body, 1]
-                L = np.sqrt(dx**2 + dy**2)
-                alpha = np.arctan2(dy, dx)
+                # for radiation problem
+                dx_i = X - coord[body, 0]
+                dy_i = Y - coord[body, 1]
+                L_i = np.sqrt(dx_i**2 + dy_i**2)
+                alpha_i = np.arctan2(dy_i, dx_i)
                 for dof in range(Ndof):
                     index = body * Ndof + dof
-                    for idx_mode, mode in enumerate(range(-M_R, M_R + 1)):
-                        Hm = jv(mode, k * L) + 1j * yv(mode, k * L)  # Hankel function type 1
-                        contribution = aR[ind][dof][body][idx_mode] * Hm * np.exp(1j * mode * alpha)
-                        ETA_R[ind, index] += contribution
-                        phiR[ind] += contribution
-                for beta in range(Ndir):
-                    for idx_mode, mode in enumerate(range(-M_S, M_S + 1)):
+                    coef_iso=AR_iso[ind][dof][0:2*M_R+1] #/(1j*w)
+                    
+                    for j in range(Nb):  # loop to sum the contribution
+                        dx = X - coord[j, 0]
+                        dy = Y - coord[j, 1]
+                        L = np.sqrt(dx**2 + dy**2)
+                        alpha = np.arctan2(dy, dx)
+                        coef=aR[ind][dof][body][(2*M_R+1)*j*(Ne+1):(2*M_R+1)*(j*(Ne+1)+1)]
+                        for mode in range(0, M_R + 1):
+                            Hm = jv(mode, k * L) + 1j * yv(mode, k * L)  # Hankel function type 1(+) or 2(-) ?
+                            contribution = coef[M_R+mode] * Hm * np.exp(1j * mode * alpha)
+                            if j==body : 
+                                Hm_i = jv(mode, k * L_i) + 1j * yv(mode, k * L_i) 
+                                contribution = coef_iso[M_R+mode] * Hm_i * np.exp(1j * mode * alpha_i)
+                            
+                            if mode>0:
+                                contribution+=coef[M_R-mode] * Hm * np.exp(-1j * mode * alpha)*(-1)**(mode)
+                                if j==body :
+                                    contribution+=coef_iso[M_R-mode] * Hm_i * np.exp(-1j * mode * alpha_i)*(-1)**(mode)
+                            if Ne>0:
+                                for l in range(1, Ne+1) :
+                                    # Km=kv(mode, kll[l-1]*L)
+                                    if j==body :
+                                        Km_i=kv(mode, kll[l-1]*L_i)
+                                        coef_E_iso=(AR_iso[ind][dof][(2*M_R+1)*l:(2*M_R+1)*(l+1)])
+                                        contribution += coef_E_iso[M_R+mode] * Km_i * np.cos(kll[l-1]*depth) * np.exp(1j * mode * alpha_i)
+                                    # coef_E=(aR[ind][dof][body][(2*M_R+1)*(j*(Ne+1)+l):(2*M_R+1)*(j*(Ne+1)+l+1)])
+                                    # contribution += coef_E[M_R+mode] * Km * np.cos(kll[l-1]*depth) * np.exp(1j * mode * alpha)
+                                    if mode>0:
+                                        # contribution+=coef_E[M_R-mode] * Km * np.cos(kll[l-1]*depth) * np.exp(-1j * mode * alpha)*(-1)**(mode)
+                                        if j==body :
+                                            contribution+=coef_E_iso[M_R-mode] * Km_i * np.cos(kll[l-1]*depth) * np.exp(-1j * mode * alpha_i)*(-1)**(mode)
+                            
+                            ETA_R[ind, index] += contribution   # for each dof and each body
+                            phiR[ind] += contribution           # sum of every radiation problem
+                                    
+            # for diffraction problem
+            for beta in range(Ndir):
+                for j in range(Nb):  
+                    dx = X - coord[j, 0]
+                    dy = Y - coord[j, 1]
+                    L = np.sqrt(dx**2 + dy**2)
+                    alpha = np.arctan2(dy, dx)
+                    coef=aS[ind][beta][(2*M_S+1)*j:(2*M_S+1)*(j+1)]
+                    for mode in range(0, M_S + 1):
                         Hm = jv(mode, k * L) + 1j * yv(mode, k * L)
-                        phiS[ind, beta] += aS[ind][beta][idx_mode] * Hm * np.exp(1j * mode * alpha)
+                        contribution = coef[M_S+mode] * Hm * np.exp(1j * mode * alpha)
+                        if mode>0:
+                            contribution+=coef[M_S-mode] * Hm * np.exp(-1j * mode * alpha)*(-1)**(mode)
+                        # contribution = ((-1)**(-mode))*(g/w)*(1j*aS[ind][beta][idx_mode]) * Hm * np.exp(-1j * mode * alpha)
+                        phiS[ind, beta] += contribution
 
+            # normalization
+            # *(1j*g/w) pour phi et *(-1j * w / g) pour ETA
+            ETA_R[ind] *= (-1j*g/w) *(-1j*w/g) /(1j*w) #/2
+            ETA_S[ind] = phiS[ind]*(1j*g/w)* (-1j * w / g)
+
+            # calcul of the total potential
             for beta in range(Ndir):
                 phiI = np.exp(1j * k * (X * np.cos(direction[beta]) + Y * np.sin(direction[beta])))
-                ETA[ind, beta] = (phiS[ind, beta] + phiR[ind]+phiI) * (1j * w / g)
-            ETA_R[ind] *= (1j * w / g)
-            ETA_S[ind] = phiS[ind]* (1j * w / g)
+                ETA[ind, beta] = (phiS[ind, beta] + phiR[ind]+phiI) #* (1j * w / g)
+            
         self.ETA=ETA
         self.ETA_R=ETA_R 
         self.ETA_S=ETA_S
-        
-        # for ind, w in enumerate(freq):
-        #     phiR = np.zeros((Nx, Ny), dtype=complex)
-        #     phiS = np.zeros((Ndir, Nx, Ny), dtype=complex)
-        #     NmR = len(aR[ind][0][0])
-        #     NmS = len(aS[ind][0])
-        #     M_R=int((NmR-1)/2)
-        #     M_S=int((NmS-1)/2)
-        #     for i in range(Nx):
-        #         for j in range(Ny):
-        #             for body in range(Nb) :
-        #                 L=np.sqrt((x[i]-coord[body, 1])**2+(y[j]-coord[body, 2])**2)
-        #                 alpha=np.arctan2((y[j]-coord[body, 2]), (x[i]-coord[body, 1]))
-        #                 for dof in range(Ndof) :
-        #                     for k, mode in enumerate(range(-M_R, M_R+1)):
-        #                         phiR[i, j] = phiR[i, j] + aR[ind][dof][body][k]*(jv(mode, k0[ind]*L)+yv(mode,k0[ind]*L))*np.exp(1j*mode*alpha)
-        #                 for beta in range(Ndir) :
-        #                     for k, mode in enumerate(range(-M_S, M_S+1)):
-        #                         phiS[beta, i, j] = phiS[beta, i, j] + aS[ind][beta][k]*(jv(mode, k0[ind]*L)+yv(mode,k0[ind]*L))*np.exp(1j*mode*alpha)
-        #             for beta in range(Ndir) :
-        #                 phiI=np.exp(1j*k0[ind]*(x[i]*np.cos(direction[beta])+y[j]*np.sin(direction[beta])))
-        #                 ETA[ind, beta, i,j] = phiS[beta, i, j]+phiR[i, j]+phiI
-        #                 ETA[ind, beta, i,j] *= 1j*w/g
-                    
+    
+    def FreeSurface2(self, coord, Nx, Ny, Lx, Ly, Rcyl) : 
+        aR=self.aR
+        aS=self.aS
+        k0=self.wnumber
+        direction = self.dir
+        freq = 2 * pi / self.period
+        Nfreq = freq.shape[0]
+        Ndir = len(self.aS[0])
+        Ndof = len(self.aR[0])
+        Nb = len(self.aR[0][0]) 
+        ETA = np.zeros((Nfreq, Ndir, Nx, Ny), dtype=complex)
+        ETA_R = np.zeros((Nfreq, Ndof,Nb, Nx, Ny), dtype=complex)
+        phiR = np.zeros((Nfreq, Nx, Ny), dtype=complex)
+        phiS = np.zeros((Nfreq, Ndir, Nb,Nx, Ny), dtype=complex)
+        ETA_S = np.zeros((Nfreq, Ndir, Nx, Ny), dtype=complex)
+        g = 9.81
+
+        x = np.linspace(-Lx/2, Lx/2, Nx)
+        y = np.linspace(-Ly/2, Ly/2, Ny)
+        X, Y = np.meshgrid(x, y, indexing='ij')  # (Nx, Ny)
+
+        for ind, w in enumerate(freq):
+            k = k0[ind]
+            for body in range(Nb):
+                for dof in range(Ndof):
+                    index = body * Ndof + dof
+                    print("w", ind, "dof", index)
+                    ETA_R[ind, dof]=CylWaveField(X, Y, 0, aR[ind][dof][body], w, k, self.depth, coord, disregard=0, convention='N', plane=0)
+                    phiR[ind] += ETA_R[ind, dof, body]
+            for beta in range(Ndir):
+                phiS[ind, beta]=CylWaveField(X, Y, 0, aS[ind][beta], w, k, self.depth, coord, disregard=0, convention='N', plane=0)
+            for beta in range(Ndir):
+                phiI = np.exp(1j * k * (X * np.cos(direction[beta]) + Y * np.sin(direction[beta])))
+                ETA[ind, beta] = (phiS[ind, beta] + phiR[ind]+phiI*(-1j*g/w)) #* (1j * w / g)
+            # *(1j*g/w) pour phi et *(-1j * w / g) pour ETA
+            ETA_R[ind] *= (1j*g/w*2)
+            for body in range(Nb):
+                ETA_S[ind] += phiS[ind,:,body]*(1j*g/w)
+        ETA_R = ETA_R.reshape(Nfreq, Ndof*Nb, Nx, Ny)
+        self.ETA=ETA
+        self.ETA_R=ETA_R 
+        self.ETA_S=ETA_S
+
+    def Write(self, directory, Ne) : 
+
+        AR=self.aR
+        AS=self.aS
+        w=2*np.pi/self.period
+        if Ne>0 : 
+            E=f"E{Ne}_"
+        else : 
+            E=""
+        AR_file_path_abs = os.path.join(directory,  f"MultiBodyProblem_{E}RadiationCoefficients_abs.dat")
+        AS_file_path_abs = os.path.join(directory,  f"MultiBodyProblem_{E}ScatteringCoefficients_abs.dat")
+        AR_file_path_ph = os.path.join(directory,  f"MultiBodyProblem_{E}RadiationCoefficients_ph.dat")
+        AS_file_path_ph = os.path.join(directory,  f"MultiBodyProblem_{E}ScatteringCoefficients_ph.dat")
+        with open(AR_file_path_abs, "w") as AR_file:
+                for i, period in enumerate(w):
+                    for dof in range(len(AR[0])):  # Loop over the forces x bodies
+                        for body in range(len2(AR[0][0])):  # Loop over the forces x bodies
+                            AR_file.write(f"{period:.4f}    ")
+                            for mode in range(len(AR[i][0][0])):  # Loop over the forces x bodies
+                                AR_file.write(f" {np.abs(AR[i][dof][body][mode]):.6e}  ")  # Absolute value of Fe
+                            AR_file.write("\n")
+        with open(AR_file_path_ph, "w") as AR_file:
+                for i, period in enumerate(w):
+                    for dof in range(len(AR[0])):  # Loop over the forces x bodies
+                        for body in range(len2(AR[0][0])):  # Loop over the forces x bodies
+                            AR_file.write(f"{period:.4f}    ")
+                            for mode in range(len(AR[i][0][0])):  # Loop over the forces x bodies
+                                AR_file.write(f" {cmath.phase(AR[i][dof][body][mode]):.6e}  ")  # Absolute value of Fe
+                            AR_file.write("\n")
+        with open(AS_file_path_abs, "w") as AS_file:
+                for i, period in enumerate(w):
+                    for beta in range(len(AS[0])):  # Loop over the forces x bodies
+                        AS_file.write(f"{period:.4f}    ")
+                        for mode in range(len(AS[i][0])): # Loop over the forces x bodies
+                            AS_file.write(f" {np.abs(AS[i][beta][mode]):.6e}  ")  # Absolute value of Fe
+                        AS_file.write("\n")
+        with open(AS_file_path_ph, "w") as AS_file:
+                for i, period in enumerate(w):
+                    for beta in range(len(AS[0])):  # Loop over the forces x bodies
+                        AS_file.write(f"{period:.4f}    ")
+                        for mode in range(len(AS[i][0])): # Loop over the forces x bodies
+                            AS_file.write(f" {cmath.phase(AS[i][beta][mode]):.6e}  ")  # Absolute value of Fe
+                        AS_file.write("\n")
+      

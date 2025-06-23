@@ -107,6 +107,8 @@
               INTEGER                          :: run_BEM
               INTEGER                          :: Nb
               INTEGER                          :: NDir
+              INTEGER                          :: ITsources
+              INTEGER                          :: Ne
               REAL                             :: DirMin,DirMax
               REAL,DIMENSION(:,:), ALLOCATABLE :: Bcoord(:,:)
               TYPE(TCylsurface)                :: Cylsurface
@@ -223,6 +225,7 @@
             ELSE
                         InpNEMOHCAL%IntTheory%Cylsurface%Switch=0
             ENDIF
+             READ(ufile,*) InpNEMOHCAL%IntTheory%ITsources, InpNEMOHCAL%IntTheory%Ne
              READ(ufile,*) InpNEMOHCAL%IntTheory%run_IT
              IF (InpNEMOHCAL%IntTheory%run_IT==1) THEN 
                 READ(ufile,*) InpNEMOHCAL%IntTheory%run_BEM

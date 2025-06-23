@@ -76,6 +76,7 @@ echo "$w_type_output						! output freq type, 1,2,3=[rad/s,Hz,s]">> $NemohFile
 
 echo "---Interaction Theory---">> $NemohFile
 echo "$cylR $cylNtheta $cylNz		! Interaction Theory Cylindrical Envelop">> $NemohFile
+echo "$ITsource $Ne 		! Interaction Theory with sources">> $NemohFile
 echo "$run_IT			! run IT">> $NemohFile
 if [ $run_IT -eq 1 ]; then
     echo "$run_BEM			! run BEM">> $NemohFile

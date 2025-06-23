@@ -80,7 +80,7 @@
     INTEGER :: Switch_Cylsurface
     INTEGER :: cyldTheta, cyldZ
     REAL    :: cylR, cylZ
-    INTEGER :: run_IT, run_BEM
+    INTEGER :: run_IT, run_BEM, ITsources
     INTEGER :: IT_Nb, IT_NDir
     REAL    :: DirMin,DirMax
     REAL,DIMENSION(:,:), ALLOCATABLE :: IT_coord
@@ -112,6 +112,7 @@
     cylR              =InpNEMOHCAL%IntTheory%Cylsurface%cylR
     cyldTheta         =InpNEMOHCAL%IntTheory%Cylsurface%cyldTheta
     cyldZ             =InpNEMOHCAL%IntTheory%Cylsurface%cyldZ
+    ITsources         =InpNEMOHCAL%IntTheory%ITsources       
     run_IT=InpNEMOHCAL%IntTheory%run_IT
     IF (run_IT .EQ. 1) THEN 
         run_BEM=InpNEMOHCAL%IntTheory%run_BEM
@@ -177,7 +178,7 @@
     ALLOCATE(NormalVelocity(Mesh%Npanels*2**Mesh%Isym,(Nbeta+Nradiation)*Nw))
     DO i=1,Nw
         DO j=1,Nbeta
-            CALL ComputeDiffractionCondition(Mesh,w(i),Beta(j),Environment,PRESSURE,NVEL)
+            CALL ComputeDiffractionCondition(ITsources, Mesh,w(i),Beta(j), j-int((Nbeta-1)/2), Environment,PRESSURE,NVEL)
             DO c=1,Mesh%Npanels*2**Mesh%Isym
                 NormalVelocity(c,j+(i-1)*(Nbeta+Nradiation))=NVEL(c)
             END DO
@@ -215,6 +216,7 @@
         run_IT = 0
         WRITE(*,*) "Cylindrical mesh necessary to apply Interaction Theory"
     END IF
+
 !   --- Save body conditions ----------------------------------------------------------------------------------------
 !
     OPEN(11,FILE=TRIM(ID%ID)//'/Normalvelocities.dat')
@@ -228,6 +230,7 @@
     WRITE(11,*) ((Switch_Kochin,j=1,Nbeta+Nradiation),i=1,Nw)
     WRITE(11,*) ((Switch_SourceDistr,j=1,Nbeta+Nradiation),i=1,Nw)
     WRITE(11,*) ((Switch_Cylsurface,j=1,Nbeta+Nradiation),i=1,Nw)
+    WRITE(11,*) ((ITsources,j=1,Nbeta+Nradiation),i=1,Nw)
     WRITE(11,*) run_IT, run_BEM
     DO c=1,Mesh%Npanels*2**Mesh%Isym
         WRITE(11,*) (REAL(NormalVelocity(c,j)),IMAG(NormalVelocity(c,j)),j=1,(Nbeta+Nradiation)*Nw)
@@ -333,6 +336,9 @@
     ELSE 
         IF (Switch_Cylsurface .EQ. 1) THEN
             WRITE(*,*) "--------- Computing cylindrical mesh ------------"
+        END IF
+        IF (ITsources .EQ. 1) THEN
+            WRITE(*,*) "--------- Computing sources for IT ------------"
         END IF
         WRITE(*,*) "--------- Interaction Theory NOT activated ------------"
     END IF

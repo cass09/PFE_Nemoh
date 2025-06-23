@@ -163,6 +163,30 @@ CONTAINS
     Vz=-II*Environment%g/w*k*SIH(k,z,Environment%Depth)*CEXP(II*k*wbar)
   END SUBROUTINE Compute_wave
 
+  SUBROUTINE Compute_WaveIT(k,w,beta, m,x,y,z,Phi,p,Vx,Vy,Vz,Environment)
+    ! Calculate the complex potential, pressure and fluid velocities for a regular wave eta=sin(k*wbar-wt)
+
+    REAL :: k,w,beta,x,y,z
+    INTEGER :: m
+    COMPLEX :: Phi,p,Vx,Vy,Vz
+    TYPE(TEnvironment) :: Environment
+    REAL :: wbar, R, theta
+    COMPLEX,PARAMETER :: II=CMPLX(0.,1.)
+
+    wbar=(x-Environment%XEFF)*COS(Beta)+(y-Environment%YEFF)*SIN(Beta)
+    Phi=-II*Environment%g/w*CIH(k,z,Environment%Depth)*CEXP(II*k*wbar)
+    ! p=Environment%rho*Environment%g*CIH(k,z,Environment%Depth)*CEXP(II*k*wbar)
+    R=sqrt(x**2+y**2)
+    theta=ATAN2(y,x)
+    p=II*Environment%rho*w*CIH(k,z,Environment%Depth)*BESSEL_JN(m, k*R)*CEXP(II*m*theta)
+    Vx=CIH(k, z, Environment%Depth)*(k*x/R*BESSEL_JN(m-1, k*R)-m/R**2*(x+II*y)*BESSEL_JN(m, k*R))*CEXP(II*m*theta)
+    Vy=CIH(k, z, Environment%Depth)*(k*y/R*BESSEL_JN(m-1, k*R)-m/R**2*(y-II*x)*BESSEL_JN(m, k*R))*CEXP(II*m*theta)
+    Vz=SIH(k, z, Environment%Depth)*(k*BESSEL_JN(m, k*R))*CEXP(II*m*theta)
+    ! Vx=Environment%g/w*k*COS(beta)*CIH(k,z,Environment%Depth)*CEXP(II*k*wbar)
+    ! Vy=Environment%g/w*k*SIN(beta)*CIH(k,z,Environment%Depth)*CEXP(II*k*wbar)
+    ! Vz=-II*Environment%g/w*k*SIH(k,z,Environment%Depth)*CEXP(II*k*wbar)
+  END SUBROUTINE Compute_waveIT
+
   SUBROUTINE COMPUTE_INC_POTENTIAL_VELOCITY(k,w,beta,                         &
                                   XM,Npanels,XM_ADD,NP_Add,                   &
                                   Environment,Isym,Potential,Velocity)

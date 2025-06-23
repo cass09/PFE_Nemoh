@@ -97,12 +97,12 @@ limite=20
 
 Nb=2
 config="X"
-Nw=2
+Nw=3
 min_w=0.3
 max_w=2
 dof=6
 
-data_FS="Module"
+data_FS="Reel"
 fichier_contour = "geo_barge.dat"  # Remplace par ton fichier des coordonnées du contour
 Rcyl = 6.36  # Rayon du cylindre IT
 
@@ -113,15 +113,21 @@ omega = np.linspace(min_w, max_w, Nw)  # vecteur des fréquences
 omega_per_pb = np.repeat(omega, Np // Nw) 
 # num : 1 à 6 dof body 1 ; 7 à 12 dof body 2 ; 13 probleme diff beta=0
 plot_1pb=True
-type_p=4
+type_p=1
 num_w=2
-
+Ne=0
+if Ne>0 :
+    E=f"E{Ne}_"
+else : 
+    E=""
 while param_d<limite : 
     print("Distance = ", param_d)
+    print("--> ", data_FS)
     BEM_file=f"{chemin}PFE_Nemoh/MyTestCases/BEM_FS_Nb{Nb}_{config}_d{param_d}/"
     PIT_file=f"{chemin}PIT3_E/wec_inputs/PIT3_barge_FS/"
     titre=f"Barge - Nb={Nb}, Nw={Nw}, dof={dof}, Ndir=1, d={param_d}"
-
+    Z_tot=0
+    Zpit_tot=0
     if plot_1pb : 
         range_plot = [type_p, Np + 1, int(Np/Nw)]
         print("Same problem")
@@ -138,11 +144,10 @@ while param_d<limite :
             print("Problem n°", num_pb, "-> Radiation")
             CAS="Radiation"
         fichier_BEM = f"{BEM_file}/results/freesurface.{num_pb}.dat"
-        fichier_PIT = f"{PIT_file}/Motion/Global_FS_d{param_d}.00_pb{num_pb}.dat"
-        fichier_PIT2 = f"{PIT_file}/Motion/Global_ETA_d{param_d}.00_pb{num_w:05d}.dat"
+        fichier_PIT = f"{PIT_file}/Motion/Global_{E}FS_d{param_d}.00_pb{num_pb}.dat"
+        fichier_PIT2 = f"{PIT_file}/Motion/Global_{E}ETA_d{param_d}.00_pb{num_w:05d}.dat"
 
-        NOM="BEM"
-        legende=f"η (m) - {NOM}"
+        
         points, triangles = READ_BEM(fichier_BEM)
         X = points[:, 0]
         Y = points[:, 1]
@@ -155,30 +160,6 @@ while param_d<limite :
         elif data_FS=="Imag" :
             Z = points[:, 6]
 
-        mask_total = np.ones_like(Z, dtype=bool)
-        marge=0.1*Rcyl
-        for i in range(Nb):
-            if config == "X":
-                cx = i * (2 * Rcyl + param_d)
-                cy = 0
-            elif config == "Y":
-                cx = 0
-                cy = i * (2 * Rcyl + param_d)
-            else:
-                raise ValueError("config must be 'X' or 'Y'")
-
-            dist = np.sqrt((X - cx)**2 + (Y - cy)**2)
-            mask_total &= (dist > Rcyl+marge)  # Garder les points hors cylindre (distance strictement > Rcyl)
-
-        # Z = np.where(mask_total, Z, 0.0)
-        Zmax=np.max(Z)
-        if plot_1pb : 
-            titre = f"Free surface Potentiel ({data_FS}) - {CAS} Problem \n for w = {omega_per_pb[int(num_pb)-1]:.{4}g}rad/s"
-            titreFILE = f"VIS_FS_{data_FS}_BEM_Nb{Nb}_{config}_d{param_d}_pb{num_pb}.png"
-            PLOT(X, Y, Z, Zmax, triangles, NOM, legende, config, Nb, Rcyl, titre, titreFILE)
-
-        NOM="PIT"
-        legende=f"η (m) - {NOM}"
         pointsPIT= np.loadtxt(fichier_PIT)
         X = pointsPIT[:, 0]
         Y = pointsPIT[:, 1]
@@ -191,38 +172,66 @@ while param_d<limite :
         elif data_FS=="Imag" :
             Zpit = pointsPIT[:, 5]
 
+        mask_total = np.ones_like(Zpit, dtype=bool)
+        marge=0.01*Rcyl
+        for i in range(Nb):
+            if config == "X":
+                cx = i * (2 * Rcyl + param_d)
+                cy = 0
+            elif config == "Y":
+                cx = 0
+                cy = i * (2 * Rcyl + param_d)
+            else:
+                raise ValueError("config must be 'X' or 'Y'")
+
+            dist = np.sqrt((X - cx)**2 + (Y - cy)**2)
+            mask_total &= (dist > Rcyl-marge)  # Garder les points hors cylindre (distance strictement > Rcyl)
         # Appliquer le masque : points dans le cylindre deviennent 0, les autres restent Zpit
         Zpit = np.where(mask_total, Zpit, 0.0)
+        diff=np.abs(np.where(mask_total, Z, 0.0)-Zpit)
+        print("Zmax :", max(np.where(mask_total, Z, 0.0)), max(Zpit), max(diff))
+        print(max(np.where(mask_total, (Zpit/Z), 0.0)), min(np.where(mask_total, Zpit/Z, 100.0)), max(np.where(mask_total, np.abs(1-Zpit/Z), 0.0)))
+        Z = np.where(mask_total, Z, 0.0)
         if plot_1pb : 
+            NOM="BEM"
+            legende=f"η (m) - {NOM}"
+            Zmax=max(np.max(Z), np.max(Zpit))
             titre = f"Free surface Potentiel ({data_FS}) - {CAS} Problem \n for w = {omega_per_pb[int(num_pb)-1]:.{4}g}rad/s"
-            titreFILE = f"VIS_FS_{data_FS}_PIT_Nb{Nb}_{config}_d{param_d}_pb{num_pb}.png"
-            PLOT(X, Y, Zpit, max(Zpit), None, NOM, legende, config, Nb, Rcyl, titre, titreFILE)
+            titreFILE = f"VIS_FS_{data_FS}_BEM_Nb{Nb}_{config}_d{param_d}_pb{num_pb}.png"
+            PLOT(X, Y, Z, np.max(Z), triangles, NOM, legende, config, Nb, Rcyl, titre, titreFILE)
 
-            legende="|η_BEM - η_PIT| (m) "
-            titre = f"Absolute error of free surface Potentiel ({data_FS}) \n  {CAS} Problem - for w = {omega_per_pb[int(num_pb)-1]:.{4}g}rad/s"
-            titreFILE = f"VIS_Error_FS_{data_FS}_Nb{Nb}_{config}_d{param_d}_pb{num_pb}.png"
-            PLOT(X, Y, np.abs(Z-Zpit), Zmax, triangles, "PIT", legende, config, Nb, Rcyl, titre, titreFILE)
-        
+            NOM="PIT"
+            legende=f"η (m) - {NOM}"
+            titre = f"Free surface Potentiel ({data_FS}) - {CAS} Problem \n for w = {omega_per_pb[int(num_pb)-1]:.{4}g}rad/s"
+            titreFILE = f"VIS_FS_{E}{data_FS}_PIT_Nb{Nb}_{config}_d{param_d}_pb{num_pb}.png"
+            PLOT(X, Y, Zpit, np.max(Zpit), None, NOM, legende, config, Nb, Rcyl, titre, titreFILE)
+
+            legende="|η_BEM - η_PIT|/A  (%) "
+            titre = f"Relative error of free surface Potentiel ({data_FS}) \n  {CAS} Problem - for w = {omega_per_pb[int(num_pb)-1]:.{4}g}rad/s"
+            titreFILE = f"VIS_Error_FS_{E}{data_FS}_Nb{Nb}_{config}_d{param_d}_pb{num_pb}.png"
+            PLOT(X, Y, diff*100, max(diff)*100, triangles, "PIT", legende, config, Nb, Rcyl, titre, titreFILE)
+
         if not plot_1pb : 
-            Z+=Z
-            Zpit+=Zpit
+            Z_tot+=Z
+            Zpit_tot+=Zpit
 
     if not plot_1pb :
         NOM="BEM"
         legende=f"η (m) - {NOM}"
         titre = f"Free surface Potentiel ({data_FS}) \n for w = {omega[num_w-1]:.{4}g}rad/s"
         titreFILE = f"VIS_FS_{data_FS}_BEM_Nb{Nb}_{config}_d{param_d}_numW{num_w}.png"
-        PLOT(X, Y, Z, Zmax, triangles, NOM, legende, config, Nb, Rcyl, titre, titreFILE)
+        PLOT(X, Y, Z_tot, max(Z_tot), triangles, NOM, legende, config, Nb, Rcyl, titre, titreFILE)
         NOM="PIT"
         legende=f"η (m) - {NOM}"
         titre = f"Free surface Potentiel ({data_FS})  \n for w = {omega[num_w-1]:.{4}g}rad/s"
         titreFILE = f"VIS_FS_{data_FS}_PIT_Nb{Nb}_{config}_d{param_d}_numW{num_w}.png"
-        PLOT(X, Y, Zpit, max(Zpit), None, NOM, legende, config, Nb, Rcyl, titre, titreFILE)
+        PLOT(X, Y, Zpit_tot, max(Zpit_tot), None, NOM, legende, config, Nb, Rcyl, titre, titreFILE)
 
+        diff=np.abs(np.where(mask_total, Z_tot, 0.0)-Zpit_tot)
         legende="|η_BEM - η_PIT| (m) "
         titre = f"Absolute error of free surface Potentiel ({data_FS})  \n for w = {omega[num_w-1]:.{4}g}rad/s"
         titreFILE = f"VIS_Error_FS_{data_FS}_Nb{Nb}_{config}_d{param_d}_numW{num_w}.png"
-        PLOT(X, Y, np.abs(Z-Zpit), Zmax, triangles, "PIT", legende, config, Nb, Rcyl, titre, titreFILE)
+        PLOT(X, Y, diff, max(diff), triangles, "PIT", legende, config, Nb, Rcyl, titre, titreFILE)
         
         NOM="PIT"
         legende=f"η (m) - {NOM}"

@@ -183,6 +183,10 @@ PROGRAM Main
       CALL WRITE_SOURCES(ZIGB,ZIGS,Mesh%Npanels,                    &
        TRIM(wd)//'/results/sources/sources.'//string(i_problem)//'.dat')
     END IF
+    IF (BodyConditions%ITsources(i_problem) == 1) THEN
+      CALL WRITE_SOURCES(ZIGB,ZIGS,Mesh%Npanels,                    &
+       TRIM(wd)//'/results/sources.'//string(i_problem)//'.dat')
+    END IF
     IF (BodyConditions%Switch_Cylsurface(i_problem) == 1) THEN
       CALL COMPUTE_AND_WRITE_CYL_SURFACE                 &
       !============================================

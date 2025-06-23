@@ -9,8 +9,9 @@ def PlotData(WECArr, farm, distance, directionMB, vect_dof, PlotFolder):
 
     w = 2*np.pi/WECArr.period
     Nb=farm['N_bodies']
+    Ndir=len(directionMB)
     if len(directionMB)==1 :
-        beta_value=f"beta={directionMB[0]}°"
+        beta_value=f"beta={directionMB[0]/np.pi*180:.1f}°"
     else :
         beta_value=""
     if farm['Configuration'] :
@@ -22,7 +23,7 @@ def PlotData(WECArr, farm, distance, directionMB, vect_dof, PlotFolder):
     else : 
         test="Ne=0"
     
-    titre=f"{type} - Nw={len(w)} - {beta_value} - {test} - distance={distance}m"
+    titre=f"{type} - Nw={len(w)} - Ndir={Ndir} {beta_value} - {test} - distance={distance}m"
     
     for i, dof in enumerate(vect_dof):
         num_dof=[]
@@ -32,11 +33,16 @@ def PlotData(WECArr, farm, distance, directionMB, vect_dof, PlotFolder):
             num_dof.append(dof+j*6)
             for k in range(j+1, Nb):
                 indice.append([dof+j*6,dof+k*6])
-        Trace_RAD(w, WECArr.Madd, "Added_Mass", indice, titre, distance, PlotFolder)
-        Trace_RAD(w, WECArr.Crad, "Damping", indice, titre, distance, PlotFolder)
-        Trace_Fex(w, WECArr.Fex, "Fex", num_dof, titre, distance, PlotFolder)
-        if farm['RAO'] :
-            Trace_Fex(w, WECArr.RAO, "RAO", num_dof, titre, distance, PlotFolder)
+        if len(directionMB)==1 :
+            Trace_RAD(w, WECArr.Madd, "Added_Mass", indice, titre, distance, PlotFolder)
+            Trace_RAD(w, WECArr.Crad, "Damping", indice, titre, distance, PlotFolder)
+            Trace_Fex(w, WECArr.Fex, "Fex", num_dof, titre, distance, PlotFolder)
+            if farm['RAO'] :
+                Trace_Fex(w, WECArr.RAO, "RAO", num_dof, titre, distance, PlotFolder)
+        else :
+            Trace_betas(w,directionMB, WECArr.Fex, "Fex", num_dof, titre, distance, PlotFolder)
+            if farm['RAO'] :
+                Trace_betas(w,directionMB, WECArr.RAO, "RAO", num_dof, titre, distance, PlotFolder)
     return True
 
 def Trace_RAD(freq, data, nom, indice, titre, d, PlotFolder):
@@ -106,3 +112,38 @@ def Trace_Fex(freq, data, nom, num_dof, titre, d, PlotFolder):
     plt.savefig(filename, dpi=300)
     plt.close()
     return
+
+def Trace_betas(freq, betaS, data, nom, num_dof, titre, d, PlotFolder) :
+    couleurs = ['b', 'g', 'r', 'gold', 'lime', 'b', 'c', 'm', 'y', 'k']  # palette de couleurs (réutilisée si plus de 7 courbes)
+    markers = ['s', 'o', '<', '^','x', '+', '*']
+    
+    betaS=np.array(betaS) /np.pi*180
+    for c, dof in enumerate(num_dof) : 
+        j=dof-1
+        plt.figure(figsize=(10, 8))
+        plt.title(titre + f", DOF {dof}")
+        plt.xlabel("Frequency (rad/s)")
+        plt.ylabel("|Fex| (N)")
+        for k, beta in enumerate(betaS) :
+            color = couleurs[k % len(couleurs)]
+            marker = markers[k % len(markers)]
+            plt.plot(freq, np.abs(data[:, k, j]), linestyle='--', marker=marker, color=color, markersize=4, label=f"beta= {beta:.1f}°")   
+        plt.legend()
+        plt.grid(True)
+        filename = os.path.join(PlotFolder, f"ITM_betas_{nom}_abs_d{d}_dof{dof}.png")
+        plt.savefig(filename, dpi=300)
+        plt.close()
+
+        plt.figure(figsize=(10, 8))
+        plt.title(titre+ f", DOF {dof}")
+        plt.xlabel("Frequency (rad/s)")
+        plt.ylabel("phase(Fex)")
+        for k, beta in enumerate(betaS) :
+            color = couleurs[k % len(couleurs)]
+            marker = markers[k % len(markers)]
+            plt.plot(freq, np.angle(data[:, k, j]), linestyle='--', marker=marker, color=color, markersize=4, label=f"beta= {beta:.1f}°")   
+        plt.legend()
+        plt.grid(True)
+        filename = os.path.join(PlotFolder, f"ITM_betas_{nom}_phase_d{d}_dof{dof}.png")
+        plt.savefig(filename, dpi=300)
+        plt.close()

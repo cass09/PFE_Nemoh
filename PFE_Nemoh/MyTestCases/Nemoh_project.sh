@@ -1,49 +1,52 @@
 
-distance=16
-configuration=False
+distance=1
+configuration="logd"
 config_type="X"
-BEM_Nb=1						# Number of bodies
-Nom_projet="BEM_K_FS_Nb1"
-FS=0
+BEM_Nb=2						# Number of bodies
+Nom_projet="BEM_barge_FS"
+FS=1
 
 # --- Description of floating bodies -  ----------------------------------------------------------------------------------------------
 CdG1=(0.0 0.0 0.0)
 mesh_file1="barge.dat"			# Name of mesh file
 Rcyl=6.36
+Ra=5
 
-if [[ "$configuration" == "True" ]]; then
+if [[ "$configuration" == "logd" ]]; then
     source tools_bash/config.sh
+elif [[ "$configuration" == "d/a" ]]; then
+    source tools_bash/config2.sh
 else
     translate1=(0.0 0.0 0.0)
     Dossier_Project=$Nom_projet
     lenghtX=0
     lenghtY=30
-    translate2=(0.0 0.0 0.0)
+    translate2=(13.72 0.0 0.0)
     CdG2=(0.0 0.0 0.0)
-    mesh_file2="CylinderR3H6m1.dat"		# Name of mesh file
+    mesh_file2="barge.dat"		# Name of mesh file
 fi
 
-N_DOF=1			# Number of degrees of freedom
-N_Forces=1						# Number of resulting generalised forces
+N_DOF=6			# Number of degrees of freedom
+N_Forces=6						# Number of resulting generalised forces
 # 1 activated
-DOF=(1  0   0   0   0   0)   # Surge, Sway, Haeve, Roll, Pitch, Yaw
-FORCES=(1  0   0   0   0   0) # Fx, Fy, Fz, Mx, My, Mz
+DOF=(1  1   1   1   1   1)   # Surge, Sway, Haeve, Roll, Pitch, Yaw
+FORCES=(1  1   1   1   1   1)  # Fx, Fy, Fz, Mx, My, Mz
 
 #  --- Load cases to be solved -------------------------------------------------------------------------------------------------------
 w_type=1  
-Nw=1
-w_min=0.3	
+Nw=3
+w_min=0.3
 w_max=2			# Freq type 1,2,3=[rad/s,Hz,s], Number of wave frequencies/periods, Min, and Max
 BEM_Nbeta=1	
 BEM_BetaMin=0.0
-BEM_BetaMax=0.0				# Number of wave directions, Min and Max (degrees)
+BEM_BetaMax=380.0				# Number of wave directions, Min and Max (degrees)
 
 # --- Post processing ---------------------------------------------------------------------------------------------------------------
 IRF=0
 dt=0.1
 tf=10.0				# IRF calculation (0 for no calculation), time step and duration
 show_pressure=0						# Show pressure
-KochinN=11
+KochinN=0
 KochinMin=0.0
 KochinMax=360.0			# Kochin function 		# Number of directions of calculation (0 for no calculations), Min and Max (degrees)
 
@@ -60,7 +63,7 @@ w_type_output=1						# output freq type, 1,2,3=[rad/s,Hz,s]
 # --- Environment ------------------------------------------------------------------------------------------------------------------
 RHO=1000.0					# RHO 		# KG/M**3 	# Fluid specific volume 
 G=9.81					# G			# M/S**2	# Gravity
-DEPTH=20.0						# DEPTH			# M		# Water depth
+DEPTH=20						# DEPTH			# M		# Water depth
 XEFF=0.0	
 YEFF=0.0					# XEFF YEFF		# M		# Wave measurement point
 
@@ -76,6 +79,8 @@ Tol=1e-5
 MaxIter=1000  	# Restart parameter, Relative Tolerance, max iter -> additional input for GMRES
 
 # ---Interaction Theory---
+ITsource=0
+Ne=0
 cylR=0
 cylNtheta=31
 cylNz=29		# Interaction Theory Cylindrical Envelop

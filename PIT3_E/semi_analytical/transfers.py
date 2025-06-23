@@ -81,7 +81,6 @@ def transfers(water_depth,
         b_s_scat = np.zeros((len(periods), vpot_scat.shape[1], (2*targ_order+1)*Nmodes_E), dtype=complex)
         coef_rad = np.zeros((len(periods), fex.shape[-1], (2*targ_order+1)*(1+Nmodes_E)), dtype=complex)
         coef_scat = np.zeros((len(periods), vpot_scat.shape[1], (2*targ_order+1)*(1+Nmodes_E)), dtype=complex)
-    
     else :
         diffmat = np.zeros((len(periods), 2*targ_order+1, 2*targ_order+1), dtype=complex)
         frcmat = np.zeros((len(periods), 2*targ_order+1, fex.shape[-1]), dtype=complex)
@@ -89,6 +88,7 @@ def transfers(water_depth,
     a_s_scat = np.zeros((len(periods), vpot_scat.shape[1], 2*targ_order+1), dtype=complex)
     dirs, modes = np.meshgrid(directions, range(-targ_order, targ_order+1),
                               indexing='ij', sparse=True)
+    
         
     wave_number_e=WNumber_E(periods, water_depth, Nmodes_E)
     for ind, per in enumerate(periods):
@@ -105,14 +105,20 @@ def transfers(water_depth,
         
         if convention == 'N':
             a_i_plane = np.exp(1j*modes*(np.pi/2.-dirs))
+            # print("a_I", a_i_plane.shape)
             if Evanescent : 
                 a_i_plane_E = np.zeros((a_i_plane.shape[0], a_i_plane.shape[1] * (Nmodes_E+1)), dtype=complex)
-                # print(a_i_plane.shape, a_i_plane_E.shape)
+                # print("a_I", a_i_plane.shape, a_i_plane_E.shape)
                 a_i_plane_E[:, 0:a_i_plane.shape[1]] = a_i_plane
                 for l in range(1, Nmodes_E+1):
                     start = l * a_i_plane.shape[1]
                     end = start + a_i_plane.shape[1]
-                    a_i_plane_E[:, start:end] = a_i_plane
+                    a_i_plane_E[:, start:end] = a_i_plane*np.exp(-1j*wave_number_e[ind][l-1])
+                    # a_i_plane_E[:, start:end] = a_i_plane*np.exp(-1j*l*(np.pi/2.-dirs))
+                    # start = l * a_i_plane.shape[1]
+                    # for j in range(a_i_plane.shape[1]):
+                    #     # vecteur unitaire de taille N_dir
+                    #     a_i_plane_E[:, start + j] = np.eye(a_i_plane.shape[0], dtype=complex)[:, j % a_i_plane.shape[0]]
                     # a_i_plane_E[:, start:end] = 0
         else:
             a_i_plane = np.exp(-1j*modes*(np.pi/2.+dirs))
@@ -128,16 +134,27 @@ def transfers(water_depth,
             coef_scat[ind, :, :2*targ_order+1]=a_s_scat[ind, :, :]
             coef_rad[ind, :, 2*targ_order+1:(2*targ_order+1)* (1 + Nmodes_E)]=b_s_rad[ind, :, :]
             coef_scat[ind, :, 2*targ_order+1:(2*targ_order+1)* (1 + Nmodes_E)]=b_s_scat[ind, :, :]
-        
             diffmat[ind] = np.linalg.lstsq(a_i_plane_E, coef_scat[ind], rcond=None)[0]
             frcmat[ind] = np.linalg.lstsq(a_i_plane_E, fex[ind], rcond=None)[0]
             act_order[ind, 0], decimals[ind, 0] = max_trunc_order(coef_scat[ind], targ_order, tol)
             act_order[ind, 1], decimals[ind, 1] = max_trunc_order(coef_rad[ind], targ_order, tol)
     
-            with open("D.dat", 'w') as f:
-                for row in diffmat[0]:
-                    line = "\t".join(f"{val.real:.6e}+{val.imag:.6e}j" for val in row)
-                    f.write(line + "\n")
+    # print(diffmat.shape, a_i_plane_E.shape, coef_scat.shape)
+    # print(frcmat.shape, coef_rad.shape)
+    # print("G", frcmat[0], "aR", coef_rad[0])
+    # with open("D.dat", 'w') as f:
+    #     for row in diffmat[0]:
+    #         line = "\t".join(f"{val.real:.6e}+{val.imag:.6e}j" for val in row)
+    #         f.write(line + "\n")
+    # with open("G.dat", 'w') as f:
+    #     for row in frcmat[0]:
+    #         line = "\t".join(f"{val.real:.6e}+{val.imag:.6e}j" for val in row)
+    #         f.write(line + "\n")
+    # with open("aR.dat", 'w') as f:
+    #     for row in coef_rad[0]:
+    #         line = "\t".join(f"{val.real:.6e}+{val.imag:.6e}j" for val in row)
+    #         f.write(line + "\n")
+
 
     # Shrink G, D and AR according to the truncation order Nm
     ini = targ_order-act_order.max()

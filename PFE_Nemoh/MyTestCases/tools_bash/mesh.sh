@@ -78,6 +78,7 @@ done
 
 
 rm -f barge_*
+rm -f Cylinder_*
 
 
 

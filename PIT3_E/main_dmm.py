@@ -97,8 +97,8 @@ if run_nemoh:
         geom = mesh.readGDF(fgdf)
         geom.dat(fdat + '.dat')
     else : 
-        geom = mesh.readDAT(fgdf)
-        geom.dat(fdat + '.dat')
+        geom, sym = mesh.readDAT(fgdf)
+        geom.dat(fdat + '.dat', sym=sym)
     
     mode = body_def['modes']
     modes = ([mode, mode],)
@@ -112,7 +112,7 @@ if run_nemoh:
     directions_nemoh = (len(directions), directions.min(), directions.max())
 
     directory = Nemoh.InputDynamics(dire, meshes, modes, freqs_nemoh, 
-                                    directions_nemoh, depth, FieldPoints, body_def['solver'])
+                directions_nemoh, depth, FieldPoints, body_def['solver'], body_def['sources'])
     ## run nemoh
     status = Nemoh.RunDynamics(directory, nemohdynamics)
 
@@ -126,25 +126,27 @@ print("DOF : ", len(body_def['modes']))
 farm = project_data['farm_definition']
 if farm["Ne_modes"]>0 :
     print("-- with evanescent waves (Ne modes =", farm["Ne_modes"], ")")
-if farm['RAO'] :
-    print("-- RAO calculation activated")
 
+if body_def['cylinder']['radius']>0 :
+    Method=0
+if body_def['sources']==1 : 
+    Method=1
+    print("----- with source terms ")
 ## generate wec (diffraction and force transfer matrices and radiation coefficents)
 WEC = Body(freqs, directions*np.pi/180., depth, farm["Ne_modes"], convention)
 
 if farm["Ne_modes"]>0 : 
     Evanescent=True
-    WEC.Transfers(dire, results, results, Evanescent, BEM='N', Tol= 1e-6)
-    WEC.PickTransfers(picklefile_E, save=True)
-    loaded_WEC = WEC.PickTransfers(picklefile_E, save=False)
+    WEC.Transfers(dire, results, results, Evanescent, Method, BEM='N', Tol= 1e-6)
+    WEC.PickTransfers(picklefile_E, Method, save=True)
+    loaded_WEC = WEC.PickTransfers(picklefile_E, Method, save=False)
 else : 
     # if not UT.file_exist(picklefile):
     Evanescent=False
-    WEC.Transfers(dire, results, results, Evanescent, BEM='N', Tol= 1e-9)
-    WEC.PickTransfers(picklefile, save=True)
-    
-    loaded_WEC = WEC.PickTransfers(picklefile, save=False)
-WEC.Write(results, Evanescent)
+    WEC.Transfers(dire, results, results, Evanescent, Method, BEM='N', Tol= 1e-9)
+    WEC.PickTransfers(picklefile, Method, save=True)
+    loaded_WEC = WEC.PickTransfers(picklefile, Method, save=False)
+WEC.Write(results, Evanescent, Method)
 
 
 #################################################################
@@ -157,9 +159,11 @@ WEC.Write(results, Evanescent)
 betas = farm['wave_directions']
 directionMB = np.linspace(betas['min'],
                         betas['max'],
-                        betas['number']) # must be converted to degrees
-if betas['format'] == 'RAD':
-    directionMB *= 180.0/np.pi
+                        betas['number']) # must be converted to degrees WHY ?? NO
+print("beta=", directionMB)
+if betas['format'] == 'DEG':
+    # directionMB *= 180.0/np.pi  #RAD to DEG
+    directionMB *= np.pi/180.0   #DEG to RAD
 print("Nbeta system : ", len(directionMB))
 
 
@@ -169,7 +173,7 @@ limite=1023
 diameter= 2*body_def['cylinder']['radius']
 
 while param_distance<=limite : 
-    if farm['Configuration'] :
+    if farm['Configuration']=="logd":
         N_bodies=farm["N_bodies"]
         print("Nb : ", N_bodies)
         if N_bodies>1 :
@@ -180,6 +184,20 @@ while param_distance<=limite :
             distance=0
         print("Type configuration", farm["Type"])
         coord = CIT.CreateConfig(N_bodies, diameter+distance, farm["Type"])
+        limite=20
+    elif farm['Configuration']=="d/a":
+        N_bodies=farm["N_bodies"]
+        print("Nb : ", N_bodies)
+        radius_a=farm["body_dim"]
+        if N_bodies>1 :
+            distance = param_distance
+            print(f"Distance between the two bodies center : {radius_a*distance}")
+            print(f"Distance / a : {distance}")
+        else :
+            distance=0
+        print("Type configuration", farm["Type"])
+        coord = CIT.CreateConfig(N_bodies, radius_a*distance, farm["Type"])
+        limite=10
     else :
         layout = farm['layout']
         print("Nb : ", len(layout))
@@ -201,8 +219,10 @@ while param_distance<=limite :
     WECArr = MB(directionMB, WEC, cylamplitude=True)
     WECArr.Scattering(coord, Evanescent) #  WECArr.Fex.shape (Num freq, Num dir, Num dof)
     WECArr.Radiation(coord, Evanescent) # Available: WECArr.Madd and WECArr.Crad, which stand for added mass and radiation damping, respectively: WECArr.Madd.shape (Num freq, Num dof, Num dof)
+    # WECArr.Write(resultsIT, farm["Ne_modes"]) # Available: WECArr.Madd and WECArr.Crad, which stand for added mass and radiation damping, respectively: WECArr.Madd.shape (Num freq, Num dof, Num dof)
     
     if farm['RAO'] :
+        print("-- RAO calculation activated")
         if not os.path.exists(Motion):
             os.makedirs(Motion)
         Mechanics = os.path.join(dire, "Mechanics")
@@ -210,6 +230,7 @@ while param_distance<=limite :
         statusH = Nemoh.RunHydro(directoryH, nemohdynamics)
         WECArr.RAO(Mechanics) 
     if farm['Kochin']['number']>0 :
+        print("-- Kochin calculation activated")
         if not os.path.exists(Motion):
             os.makedirs(Motion)
         thetaK = np.linspace(farm['Kochin']['min'],
@@ -221,9 +242,11 @@ while param_distance<=limite :
         WECArr.Kochin(thetaK) 
 
     if farm['Free_surface']['Nx'] > 0 :
+        print("-- Free surface calculation activated")
         if not os.path.exists(Motion):
             os.makedirs(Motion)
-        WECArr.FreeSurface(coord, farm['Free_surface']['Nx'], farm['Free_surface']['Ny'], farm['Free_surface']['Lx'], farm['Free_surface']['Ly']) 
+        WECArr.FreeSurface(coord, farm['Free_surface']['Nx'], farm['Free_surface']['Ny'], 
+                           farm['Free_surface']['Lx'], farm['Free_surface']['Ly'], farm["Ne_modes"]) 
 
 
 #################################################################
@@ -233,12 +256,16 @@ while param_distance<=limite :
 #################################################################
     if not os.path.exists(resultsIT):
         os.makedirs(resultsIT)
-    out=output.WriteData(WECArr, directionMB, farm, distance, resultsIT, results_h5, Motion)
+    out=output.WriteData(WECArr, directionMB, farm, distance, resultsIT, results_h5, Motion, Method)
     if len(farm['Plot_DOF'])>0 :
         if not os.path.exists(PlotFolder):
             os.makedirs(PlotFolder)
         out=plot.PlotData(WECArr, farm, distance, directionMB, farm['Plot_DOF'], PlotFolder)
-    param_distance=param_distance*2
+    
+    if farm['Configuration']=="d/a":
+        param_distance=param_distance+1
+    else :
+        param_distance=param_distance*2
 
 
 assert len(WECArr.Fex[:, 0, 0]) == len(WECArr.Madd[:, 0, 0]) == len(WECArr.period)

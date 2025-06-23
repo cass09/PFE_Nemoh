@@ -143,30 +143,36 @@ def len2(x):
     except TypeError:
         raise TypeError('Attempted len2(x) but type(x) = {} is not supported in this version'.format(type(x)))
 
-def CylWaveField(X, Y, Z, a, fr, k, h, coord, disregard, convention='W', plane=0):
+def CylWaveField(X, Y, Z, a, fr, k, h, coord, disregard, convention='N', plane=0):
     Nb = len2(coord)
-    Nm = (len2(a)/Nb-1)/2
+    Nm = int((len2(a)/Nb-1)/2)
     mode = range(-Nm,Nm+1)
     XX , YY = np.meshgrid(X, Y, indexing='ij')
     Phi = np.zeros((Nb, XX.shape[0], YY.shape[1]), dtype=complex)
     for i in range(Nb):
-        Xi, Yi= coord[i]
+        Xi, Yi= coord[i,:]
+        print(Xi, Yi)
         ri = np.sqrt((XX-Xi)**2+(YY-Yi)**2)
         thi = np.arctan2(YY-Yi,XX-Xi)
-        Phi[i][ri<=disregard] = np.nan
+        kr=k*ri
+        # Phi[i][ri<=disregard] = np.nan
         ai = a[(2*Nm+1)*i:(2*Nm+1)*(i+1)]
         for m in mode[Nm:]:
-            H = jv(m,k*ri)-1j*yv(m,k*ri)
+        # for m in range(Nm+1):
+            print("ici H", m)
+            Hm = jv(m,kr)-1j*yv(m,kr)
+            print("conj H")
             if convention == 'N' :
-                H = np.conj(H)
+                Hm = np.conj(Hm)
+            print("ici Phi")
             if plane == 1:
-                Phi[i] += ai[Nm+m]*H.real*np.exp(1j*m*thi)
+                Phi[i] += ai[Nm+m]*Hm.real*np.exp(1j*m*thi)
                 if m > 0:
-                    Phi[i] += ai[Nm-m]*(-1)**m*H.real*np.exp(1j*-m*thi)
+                    Phi[i] += ai[Nm-m]*(-1)**m*Hm.real*np.exp(1j*-m*thi)
             else :
-                Phi[i] += ai[Nm+m]*H*np.exp(1j*m*thi)
+                Phi[i] += ai[Nm+m]*Hm*np.exp(1j*m*thi)
                 if m > 0:
-                    Phi[i] += ai[Nm-m]*(-1)**m*H*np.exp(1j*-m*thi)
+                    Phi[i] += ai[Nm-m]*(-1)**m*Hm*np.exp(1j*-m*thi)
     if convention == 'N' :
         Phi *= -1j*g/fr
     else :

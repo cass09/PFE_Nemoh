@@ -9,6 +9,7 @@ from pickle import Pickler, Unpickler
 from toolbox.CalaixSastre import WNumber, WNumber_E
 from BEM import WAMIT, Nemoh
 from semi_analytical.transfers import transfers
+from semi_analytical.transfers_sources import transfers_sources
 import cmath
 
 # Settings
@@ -28,7 +29,7 @@ class Body(object):
         self.wnumber_E = WNumber_E(self.period, self.depth, self.Nmodes_E)
         self.convention = convention
 
-    def Transfers(self, dirSet, dirDy, dirFP, Evanescent, BEM ='N', Tol=1e-6, check=True):
+    def Transfers(self, dirSet, dirDy, dirFP, Evanescent, Method, BEM ='N', Tol=1e-6, check=True):
         """
         """
         if BEM == 'W':
@@ -40,22 +41,28 @@ class Body(object):
 
         elif BEM == 'N':
             # Read Nemoh output files
-            (dof, force, freq, dirs, FieldPoints, whichDOF, whichFORCE, depth) = Nemoh.ReadNemohcal(dirSet)
+            (dof, force, freq, dirs, FieldPoints, BodyMesh, whichDOF, whichFORCE, depth, NMethod) = Nemoh.ReadNemohcal(dirSet)
             period = 2*pi/freq
             (Fex, Madd, Crad) = Nemoh.ReadDynamics(dirDy, dof, force, len(dirs), self.convention)
             if dirFP:
-                (PhiS, PhiR, r, t, z) = Nemoh.ReadFieldPoints(dirFP, dof, freq, len(dirs), FieldPoints, self.convention)
-
+                if Method==0:
+                    (PhiS, PhiR, r, t, z) = Nemoh.ReadFieldPoints(dirFP, dof, freq, len(dirs), FieldPoints, self.convention)
+                else :
+                    (SourcesS, SourcesR, centers, areas) = Nemoh.ReadSources(dirFP, dof, freq, len(dirs), BodyMesh, self.convention)
+                    print("SOURCES after reading")
         # Assign new atributes
         self.Fex = Fex ; self.Madd = Madd ; self.Crad = Crad ; self.dof = dof
-        if dirFP: self.radius = r ; self.fpazimuth = t ; self.fpdepth = z
+        if dirFP and Method==0 : self.radius = r ; self.fpazimuth = t ; self.fpdepth = z
 
         # Check point
         if check:
             requires = [abs(self.period-period) < TolCheck, abs(self.dir-dirs) < TolCheck, [abs(self.depth-depth) < TolCheck]]
             requires = [all(requires[ind]) for ind in range(len(requires))]
+            # print(Method, int(NMethod[0]))
+            requires = [Method==int(NMethod[0])]
             if not all(requires):
                 print('period {} , dirs {} , depth {}'.format(*requires))
+                print('Method', Method, int(NMethod[0]))
                 raise IOError('Wave data retrieved from output files is different than inputs')
         else:
             self.period, self.dir, self.depth = period, dirs, depth
@@ -63,14 +70,20 @@ class Body(object):
             self.wnumber_E = WNumber_E(self.period, self.depth, self.Nmodes_E)
         # Compute diffraction and force transfer matrices
         if dirFP:
-            (self.D, self.G, self.AR, self.AS, self.order, self.truncorder) = transfers(self.depth, self.dir, self.period,
+            if Method==0:
+                (self.D, self.G, self.AR, self.AS, self.order, self.truncorder) = transfers(self.depth, self.dir, self.period,
                                                                                (self.radius, self.fpazimuth, self.fpdepth),
                                                                                PhiS, PhiR, self.Fex, Tol, self.convention, 
                                                                                Evanescent, self.Nmodes_E)
+            else :
+                (self.D, self.G, self.AR, self.AS, self.order, self.truncorder) = transfers_sources(self.depth, self.dir, self.period,
+                                                                            (centers, areas), SourcesS, SourcesR, self.Fex, Tol, self.convention, 
+                                                                               Evanescent, self.Nmodes_E)
+                # print("after", self.D)
         else:
             self.D = self.G = self.AR =self.AS = self.order = self.truncorder = self.radius = self.fpazimuth = self.fpdepth = dirFP
 
-    def PickTransfers(self, picklefile, save=False, check=True) :
+    def PickTransfers(self, picklefile, Method, save=False, check=True) :
         """
         """
         # Generate a pickler
@@ -80,12 +93,22 @@ class Body(object):
         else :
             with open(picklefile , 'rb') as fid:
                 iB = Unpickler(fid).load()
-            (self.Fex, self.Madd, self.Crad, self.radius, self.fpazimuth, self.fpdepth,
-             depth, dirs, period, self.wnumber, self.dof, self.order, self.truncorder,
-             self.G, self.D, self.AR, self.AS) = \
-             (iB.Fex, iB.Madd, iB.Crad, iB.radius, iB.fpazimuth, iB.fpdepth,
-             iB.depth, iB.dir, iB.period, iB.wnumber, iB.dof, iB.order, iB.truncorder,
-             iB.G, iB.D, iB.AR, iB.AS)
+            if Method==0:
+                (self.Fex, self.Madd, self.Crad, self.radius, self.fpazimuth, self.fpdepth,
+                depth, dirs, period, self.wnumber, self.dof, self.order, self.truncorder,
+                self.G, self.D, self.AR, self.AS) = \
+                (iB.Fex, iB.Madd, iB.Crad, iB.radius, iB.fpazimuth, iB.fpdepth,
+                iB.depth, iB.dir, iB.period, iB.wnumber, iB.dof, iB.order, iB.truncorder,
+                iB.G, iB.D, iB.AR, iB.AS)
+            else : 
+                 (self.Fex, self.Madd, self.Crad,
+                depth, dirs, period, self.wnumber, self.dof, self.order, self.truncorder,
+                self.G, self.D, self.AR, self.AS) = \
+                (iB.Fex, iB.Madd, iB.Crad, 
+                iB.depth, iB.dir, iB.period, iB.wnumber, iB.dof, iB.order, iB.truncorder,
+                iB.G, iB.D, iB.AR, iB.AS)
+                #  print("self.D", self.D)
+                #  print("iB.D", iB.D)
 
             # Check point
             if check:
@@ -113,7 +136,7 @@ class Body(object):
         self.AS = self.AS[cond]
         self.truncorder = self.truncorder[cond]
 
-    def Write(self, directory, Evanescent) : 
+    def Write(self, directory, Evanescent, Method) : 
 
         D=self.D
         G=self.G
@@ -124,18 +147,22 @@ class Body(object):
             E=f"E{self.Nmodes_E}_"
         else : 
             E=""
-        D_file_path_abs = os.path.join(directory,  f"OneBodyProblem_{E}DiffractionMatrix_abs.dat")
-        D_file_path_ph = os.path.join(directory,  f"OneBodyProblem_{E}DiffractionMatrix_ph.dat")
-        D_file_path_Re = os.path.join(directory,  f"OneBodyProblem_{E}DiffractionMatrix_Re.dat")
-        D_file_path_Imag = os.path.join(directory,  f"OneBodyProblem_{E}DiffractionMatrix_Imag.dat")
-        G_file_path_abs = os.path.join(directory,  f"OneBodyProblem_{E}ForceTransferMatrix_abs.dat")
-        G_file_path_ph = os.path.join(directory,  f"OneBodyProblem_{E}ForceTransferMatrix_ph.dat")
-        AR_file_path_abs = os.path.join(directory,  f"OneBodyProblem_{E}RadiationCoefficients_abs.dat")
-        AS_file_path_abs = os.path.join(directory,  f"OneBodyProblem_{E}ScatteringCoefficients_abs.dat")
-        AR_file_path_ph = os.path.join(directory,  f"OneBodyProblem_{E}RadiationCoefficients_ph.dat")
-        AR_file_path_Re = os.path.join(directory,  f"OneBodyProblem_{E}RadiationCoefficients_Re.dat")
-        AR_file_path_Imag = os.path.join(directory,  f"OneBodyProblem_{E}RadiationCoefficients_Imag.dat")
-        AS_file_path_ph = os.path.join(directory,  f"OneBodyProblem_{E}ScatteringCoefficients_ph.dat")
+        if Method==1:
+             S="S_"
+        else :
+             S=""
+        D_file_path_abs = os.path.join(directory,  f"{S}OneBodyProblem_{E}DiffractionMatrix_abs.dat")
+        D_file_path_ph = os.path.join(directory,  f"{S}OneBodyProblem_{E}DiffractionMatrix_ph.dat")
+        D_file_path_Re = os.path.join(directory,  f"{S}OneBodyProblem_{E}DiffractionMatrix_Re.dat")
+        D_file_path_Imag = os.path.join(directory,  f"{S}OneBodyProblem_{E}DiffractionMatrix_Imag.dat")
+        G_file_path_abs = os.path.join(directory,  f"{S}OneBodyProblem_{E}ForceTransferMatrix_abs.dat")
+        G_file_path_ph = os.path.join(directory,  f"{S}OneBodyProblem_{E}ForceTransferMatrix_ph.dat")
+        AR_file_path_abs = os.path.join(directory,  f"{S}OneBodyProblem_{E}RadiationCoefficients_abs.dat")
+        AS_file_path_abs = os.path.join(directory,  f"{S}OneBodyProblem_{E}ScatteringCoefficients_abs.dat")
+        AR_file_path_ph = os.path.join(directory,  f"{S}OneBodyProblem_{E}RadiationCoefficients_ph.dat")
+        AR_file_path_Re = os.path.join(directory,  f"{S}OneBodyProblem_{E}RadiationCoefficients_Re.dat")
+        AR_file_path_Imag = os.path.join(directory,  f"{S}OneBodyProblem_{E}RadiationCoefficients_Imag.dat")
+        AS_file_path_ph = os.path.join(directory,  f"{S}OneBodyProblem_{E}ScatteringCoefficients_ph.dat")
         with open(D_file_path_abs, "w") as D_file:
                 for i, period in enumerate(w):
                     for j in range(len(D[0, :, 0])):  # Loop over the forces x bodies
@@ -224,3 +251,10 @@ class Body(object):
             f.write(f"w (rad/s) - k (m^-1) - L or lambda (m) - T (s) - f (Hz)\n  ")
             for i, value in enumerate(w) : 
                 f.write(f"{value:8.4f}  {self.wnumber[i]:8.4f}    {2*pi/self.wnumber[i]:8.4f}     {2*np.pi/value:8.4f}  {value/(2*np.pi):8.4f}\n  ")
+        with open(os.path.join(directory,f"Data_Ewaves.dat"), "w") as f:
+            f.write(f"w (rad/s) - kl (m^-1) with L={self.Nmodes_E} \n")
+            for i, value in enumerate(w) : 
+                f.write(f"{value:8.4f}")
+                for e in range(self.Nmodes_E) :
+                    f.write(f" {self.wnumber_E[i, e]:8.4f} ")
+                f.write("\n ")

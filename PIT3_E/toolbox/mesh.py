@@ -672,7 +672,7 @@ def readDAT(fn, translation = np.zeros(3), rotation = np.zeros(3)) :
                         coord[panel,node,ax] = np.dot(R,[panel,node,ax])
     ## instantiate the surface using coord as (Npanels, Nnodes, Ncoord)
     surface = SurF(coord)
-    return surface
+    return surface, sym
 
 def mergeGDFs(fns, mfn) :
     """
