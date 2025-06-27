@@ -102,8 +102,11 @@ if run_nemoh:
     
     mode = body_def['modes']
     modes = ([mode, mode],)
-    
-    FieldPoints = (body_def['cylinder']['radius'],
+    if body_def['sources']==1:
+        radius=0
+    else :
+        radius=body_def['cylinder']['radius']
+    FieldPoints = (radius,
                    body_def['cylinder']['azimuthal_discretization'],
                    body_def['cylinder']['depth_discretization']) # (radius of the cylinder enclosing the body, azimuthal discretization, depth discretization)
     meshes = ([f"{nemoh_def['mesh_filename'][:-4]}.dat", geom.Nnodes, geom.Npanels], )
@@ -184,7 +187,7 @@ while param_distance<=limite :
             distance=0
         print("Type configuration", farm["Type"])
         coord = CIT.CreateConfig(N_bodies, diameter+distance, farm["Type"])
-        limite=20
+        limite=600
     elif farm['Configuration']=="d/a":
         N_bodies=farm["N_bodies"]
         print("Nb : ", N_bodies)

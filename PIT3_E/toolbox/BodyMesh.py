@@ -17,18 +17,19 @@ def get_panel_centers_cylindrical(meshfile_path):
     """
     with open(meshfile_path, "r") as f:
         lines = f.readlines()
-
     point_dict = {}
     panels = []
 
     reading_nodes = True
     reading_panels = False
-
+    First=True
     for line in lines:
         if not line.strip():
             continue
         parts = line.strip().split()
-
+        if First:
+            sym=int(parts[1])
+            First=False
         if reading_nodes:
             if parts[0] == '0':
                 # Fin de la liste des noeuds
@@ -46,10 +47,8 @@ def get_panel_centers_cylindrical(meshfile_path):
             # Lecture panneau : indices des noeuds (sans ID panneau)
             ids = list(map(int, parts))
             panels.append(ids)
-
     cylindrical_centers = []
     areas = []
-
     for panel in panels:
         try:
             verts = np.array([point_dict[pid] for pid in panel])
@@ -57,22 +56,33 @@ def get_panel_centers_cylindrical(meshfile_path):
             print(f"⚠️ ID de nœud non trouvé : {e}. Panneau ignoré.")
             continue
 
-        # Centre
-        center = verts.mean(axis=0)
-        x, y, z = center
-        r = np.sqrt(x**2 + y**2)
-        theta = np.arctan2(y, x)
-        cylindrical_centers.append([r, theta, z])
+        def compute_one_panel(verts_panel):
+            center = verts_panel.mean(axis=0)
+            x, y, z = center
+            r = np.sqrt(x**2 + y**2)
+            theta = np.arctan2(y, x)
+            if len(verts_panel) == 4 and not np.allclose(verts_panel[0], verts_panel[1]):
+                AB = verts_panel[1] - verts_panel[0]
+                AD = verts_panel[3] - verts_panel[0]
+                area = np.linalg.norm(np.cross(AB, AD))
+            else:
+                AB = verts_panel[1] - verts_panel[0]
+                AC = verts_panel[2] - verts_panel[0]
+                area = 0.5 * np.linalg.norm(np.cross(AB, AC))
+            return [r, theta, z], area
 
-        # Aire du panneau rectangle
-        if len(verts) == 4:
-            AB = verts[1] - verts[0]
-            AD = verts[3] - verts[0]
-            area = np.linalg.norm(np.cross(AB, AD))
-        else:
-            area = 0.0  # ou gérer différemment si triangles ou autres
+        # Panneau original
+        r_theta_z, area = compute_one_panel(verts)
+        cylindrical_centers.append(r_theta_z)
         areas.append(area)
-
+        # Si symétrie, ajouter le panneau miroir
+        if sym == 1:
+            verts_mirror = verts.copy()
+            verts_mirror[:, 1] *= -1  # y -> -y
+            verts_mirror = verts_mirror[::-1]  # inverser l’ordre des points pour conserver orientation normale
+            r_theta_z_mirror, area_mirror = compute_one_panel(verts_mirror)
+            cylindrical_centers.append(r_theta_z_mirror)
+            areas.append(area_mirror)
     return np.array(cylindrical_centers), np.array(areas)
 
 

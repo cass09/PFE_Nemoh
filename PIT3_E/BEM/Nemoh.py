@@ -461,6 +461,9 @@ def ReadSources(directory, DOF, freq, Nd, meshfile, convention = 'N') :
     # radius = centers[:,0]
     # theta = centers[:,1]
     # z = centers[:,2]
+    for ind, fr in enumerate(freq):
+        Radiation[ind] *= (-1j*fr) # *(-1j*fr) Radiation will be due to unit amplitude motion
+   
     return (Scattering, Radiation, centers, areas)
 
 def ReadStatics(directories, whichDOFs, whichFORCEs) :

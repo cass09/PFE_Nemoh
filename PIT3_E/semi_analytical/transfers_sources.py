@@ -63,28 +63,38 @@ def transfers_sources(water_depth,
     decimals = np.zeros((len(periods), 2), dtype=int)
     
     diffmat = np.zeros((len(periods), 2*targ_order+1, 2*targ_order+1), dtype=complex)
+    diffmat_w = np.zeros((2*targ_order+1, 2*targ_order+1), dtype=complex)
     frcmat = np.zeros((len(periods), 2*targ_order+1, fex.shape[-1]), dtype=complex)
     a_s_rad = np.zeros((len(periods), fex.shape[-1], 2*targ_order+1), dtype=complex)
+    a_s_rad_w = np.zeros((fex.shape[-1], 2*targ_order+1), dtype=complex)
     a_s_scat = np.zeros((len(periods), source_scat.shape[1], 2*targ_order+1), dtype=complex)
     dirs, modes = np.meshgrid(directions, range(-targ_order, targ_order+1),
                               indexing='ij', sparse=True)
-    print("tranfers")
+    g=9081
     for ind, per in enumerate(periods):
-        Kw=(2.*np.pi/per)**2/9.81
+        a_i_plane = np.exp(1j*modes*(np.pi/2.-dirs))
+        Kw=(2.*np.pi/per)**2/g
         k0= WNumber(per, water_depth)
         C0=(Kw**2-k0**2)/((k0**2-Kw**2)*water_depth+Kw)
         wave_cond = (water_depth, 2.*np.pi/per, k0)
         int_scat = integral_sources(wave_cond, BodyMesh, source_scat[ind], targ_order)
         int_rad = integral_sources(wave_cond, BodyMesh, source_rad[ind], targ_order)
-        a_s_rad[ind]=1j/2*C0*np.cosh(k0*water_depth)*int_rad
+        a_s_rad_w=1j/2*C0*np.cosh(k0*water_depth)*int_rad
         # print(a_s_rad)
-        diffmat[ind] = 1j/2*C0*np.cosh(k0*water_depth)*int_scat
-        # frcmat[ind] = np.linalg.lstsq(psi_i, fex[ind], rcond=None)[0]
+        diffmat_w = 1j/2*C0*np.cosh(k0*water_depth)*int_scat
+        # frcmat[ind] = np.linalg.lstsq(a_i_plane, fex[ind], rcond=None)[0]
         frcmat[ind]=fex[ind]
         # act_order[ind, 0], decimals[ind, 0] = max_trunc_order(a_s_scat[ind], targ_order, tol)
         act_order[ind, 0] = targ_order
         act_order[ind, 1], decimals[ind, 1] = max_trunc_order(a_s_rad[ind], targ_order, tol)
-    
+        # for m in range(-targ_order, targ_order+1):
+        #     # a_s_rad[ind][:, m+targ_order]=(-1)**(-m)*(2.*np.pi/per)**2/g*np.conj(a_s_rad_w[:,-m+targ_order])
+        #     a_s_rad[ind][:, m+targ_order]=(-1)**(m)/g*(a_s_rad_w[:,m+targ_order])
+        #     for q in range(-targ_order, targ_order+1):
+        #         diffmat[ind][m+targ_order, q+targ_order] = (-1)**(q - m) *np.conj(diffmat_w[-m + targ_order, -q + targ_order])
+                # diffmat[ind][m+targ_order, q+targ_order] = (-1)**(m-q) *(diffmat_w[m + targ_order, q + targ_order])
+        diffmat[ind]=diffmat_w
+        a_s_rad[ind]=a_s_rad_w
     # print(diffmat.shape, a_i_plane_E.shape, coef_scat.shape)
     # print(frcmat.shape, coef_rad.shape)
     # print("G", frcmat[0], "aR", coef_rad[0])
@@ -108,7 +118,6 @@ def transfers_sources(water_depth,
     fin = ini+2*act_order.max()+1
     # print(diffmat.shape, ini, fin)
     # print(act_order.shape, act_order)
-   
     return (diffmat[:, ini:fin, ini:fin],
                 frcmat[:, ini:fin, :],
                 a_s_rad[:, :, ini:fin],

@@ -174,11 +174,11 @@ CONTAINS
     COMPLEX,PARAMETER :: II=CMPLX(0.,1.)
 
     wbar=(x-Environment%XEFF)*COS(Beta)+(y-Environment%YEFF)*SIN(Beta)
-    Phi=-II*Environment%g/w*CIH(k,z,Environment%Depth)*CEXP(II*k*wbar)
+    Phi=CIH(k,z,Environment%Depth)*BESSEL_JN(m, k*R)*CEXP(II*m*theta)
     ! p=Environment%rho*Environment%g*CIH(k,z,Environment%Depth)*CEXP(II*k*wbar)
     R=sqrt(x**2+y**2)
     theta=ATAN2(y,x)
-    p=II*Environment%rho*w*CIH(k,z,Environment%Depth)*BESSEL_JN(m, k*R)*CEXP(II*m*theta)
+    p=II*Environment%rho*w*Phi
     Vx=CIH(k, z, Environment%Depth)*(k*x/R*BESSEL_JN(m-1, k*R)-m/R**2*(x+II*y)*BESSEL_JN(m, k*R))*CEXP(II*m*theta)
     Vy=CIH(k, z, Environment%Depth)*(k*y/R*BESSEL_JN(m-1, k*R)-m/R**2*(y-II*x)*BESSEL_JN(m, k*R))*CEXP(II*m*theta)
     Vz=SIH(k, z, Environment%Depth)*(k*BESSEL_JN(m, k*R))*CEXP(II*m*theta)

@@ -155,8 +155,8 @@ class Body(object):
         D_file_path_ph = os.path.join(directory,  f"{S}OneBodyProblem_{E}DiffractionMatrix_ph.dat")
         D_file_path_Re = os.path.join(directory,  f"{S}OneBodyProblem_{E}DiffractionMatrix_Re.dat")
         D_file_path_Imag = os.path.join(directory,  f"{S}OneBodyProblem_{E}DiffractionMatrix_Imag.dat")
-        G_file_path_abs = os.path.join(directory,  f"{S}OneBodyProblem_{E}ForceTransferMatrix_abs.dat")
-        G_file_path_ph = os.path.join(directory,  f"{S}OneBodyProblem_{E}ForceTransferMatrix_ph.dat")
+        G_file_path_Re = os.path.join(directory,  f"{S}OneBodyProblem_{E}ForceTransferMatrix_Re.dat")
+        G_file_path_Imag = os.path.join(directory,  f"{S}OneBodyProblem_{E}ForceTransferMatrix_Imag.dat")
         AR_file_path_abs = os.path.join(directory,  f"{S}OneBodyProblem_{E}RadiationCoefficients_abs.dat")
         AS_file_path_abs = os.path.join(directory,  f"{S}OneBodyProblem_{E}ScatteringCoefficients_abs.dat")
         AR_file_path_ph = os.path.join(directory,  f"{S}OneBodyProblem_{E}RadiationCoefficients_ph.dat")
@@ -191,19 +191,19 @@ class Body(object):
                         for k in range(len(D[0, 0, :])):  # Loop over the forces x bodies
                             D_file.write(f" {(D[i, j, k]).imag:.6e}  ")  # Absolute value of Fe
                         D_file.write("\n")
-        with open(G_file_path_abs, "w") as G_file:
+        with open(G_file_path_Re, "w") as G_file:
                 for i, period in enumerate(w):
                     for j in range(len(G[0, :, 0])):  # Loop over the forces x bodies
                         G_file.write(f"{period:.4f}    ")
                         for k in range(len(G[0, 0, :])):  # Loop over the forces x bodies
-                            G_file.write(f" {np.abs(G[i, j, k]):.6e}  ")  # Absolute value of Fe
+                            G_file.write(f" {(G[i, j, k]).real:.6e}  ")  # Absolute value of Fe
                         G_file.write("\n")
-        with open(G_file_path_ph, "w") as G_file:
+        with open(G_file_path_Imag, "w") as G_file:
                 for i, period in enumerate(w):
                     for j in range(len(G[0, :, 0])):  # Loop over the forces x bodies
                         G_file.write(f"{period:.4f}    ")
                         for k in range(len(G[0, 0, :])):  # Loop over the forces x bodies
-                            G_file.write(f" {cmath.phase(G[i, j, k]):.6e}  ")  # Absolute value of Fe
+                            G_file.write(f" {(G[i, j, k]).imag:.6e}  ")  # Absolute value of Fe
                         G_file.write("\n")
         with open(AR_file_path_abs, "w") as AR_file:
                 for i, period in enumerate(w):

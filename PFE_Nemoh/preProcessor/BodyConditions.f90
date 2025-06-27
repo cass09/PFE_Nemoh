@@ -137,7 +137,13 @@ CONTAINS
                 CALL Compute_Wave(kwave,w,beta,Mesh%XM(1,i),Mesh%XM(2,i),Mesh%XM(3,i),Phi,p,Vx,Vy,Vz,Environment)
             ELSE 
                 CALL Compute_WaveIT(kwave,w,beta,mode, Mesh%XM(1,i),Mesh%XM(2,i),Mesh%XM(3,i),Phi,p,Vx,Vy,Vz,Environment)
-            END IF
+            END IF 
+            ! if (i==50) then
+            !     print*, "pressure", p
+            !     print*, "Vx", Vx
+            !     print*, "Vy", Vy
+            !     print*, "Vz", Vz
+            ! end if
            IF (Mesh%XM(3,i).lt.0.) THEN !if ZMN<0, dont calculate on the lid meshes (for irregular freq) by RK
             PRESSURE(i)=p
             NVEL(i)=-(Vx*Mesh%N(1,i)+Vy*Mesh%N(2,i)+Vz*Mesh%N(3,i))

@@ -389,7 +389,10 @@ class MultiBody(object):
 
     def Kochin(self, theta) : 
         aR=self.aR
+        AR_iso = self.Body.AR
         aS=self.aS
+        k0=self.wnumber
+        d=self.depth
         # RAO=self.RAO
         # print("Radiation")
         # print(len(self.aR), len(self.aR[0]), len(self.aR[0][0]), len(self.aR[0][0][0]), len(self.aR[1][0][0]))
@@ -408,25 +411,44 @@ class MultiBody(object):
             NmS = len(aS[ind][0])
             M_R=int((NmR-1)/(2*Nb))
             M_S=int((NmS-1)/(2*Nb))
+            k_factor=(0.5*np.exp(k0[ind]*d)/(np.sinh(k0[ind]*d)*k0[ind]))
             for k, angle in enumerate(theta) :
                 for body in range(Nb) :
                     for dof in range(Ndof) :
                         index_dof = body * Ndof + dof
-                        for mode in range(-M_R, M_R+1):
-                            for j in range(Nb):  
-                                idx_mode = j * (2*M_R+1) + (mode + M_R)  
+                        coef_iso=AR_iso[ind][dof][0:2*M_R+1] #/(1j*w)
+                        for j in range(Nb):  # loop to sum the contribution
+                            coef=aR[ind][dof][body][(2*M_R+1)*j:(2*M_R+1)*(j+1)]
+                            for mode in range(-M_R, M_R + 1):
+                                # contribution = coef[M_R+mode] * (-1j)**(mode)  * np.exp(1j * mode * angle)
+                                if j==body : 
+                                    contribution = coef_iso[M_R+mode] * (-1j)**(mode)  * np.exp(1j * mode * angle)
+                                
+                                # if mode>0:
+                                #     contribution+=coef[M_R-mode] * (-1j)**(mode) * np.exp(-1j * mode * angle)*(-1)**(mode)
+                                #     if j==body :
+                                #         contribution+=coef_iso[M_R-mode] * (-1j)**(mode) * np.exp(-1j * mode * angle)*(-1)**(mode)
+                                KochinR[ind, index_dof, k]+= contribution
+                        KochinR[ind, index_dof, k]= KochinR[ind, index_dof, k]*(1j*w/g)*(-1j*g/w)/(1j*w) *k_factor
                             # KochinR[ind, index_dof, k]+= (-1j)**mode *(1j*w/g) *aR[ind][dof][body][i]*np.exp(1j*mode*angle)
                                 # KochinR[ind, index_dof, k]+= (1j)**mode  *aR[ind][dof][body][idx_mode]*np.exp(1j*mode*angle)
-                                KochinR[ind, index_dof, k]+= (1j)**mode *(1j*w/g)  *np.conj(aR[ind][dof][body][idx_mode])*np.exp(-1j*mode*angle)
+                                # KochinR[ind, index_dof, k]+= (1j)**mode *(1j*w/g)  *np.conj(aR[ind][dof][body][idx_mode])*np.exp(-1j*mode*angle)
                 for beta in range(Ndir) :
-                    for mode in range(-M_S, M_S+1):
-                        for j in range(Nb):  
-                            idx_mode = j * (2*M_S+1) + (mode + M_S)  
-                            KochinS[ind, beta, k]+= (1j)**mode*(1j*w/g)  *np.conj(aS[ind][beta][idx_mode])*np.exp(-1j*mode*angle)
-        scale=np.sqrt(2/np.pi)*np.exp(1j*np.pi/4)
+                    for j in range(Nb):  
+                        coef=aS[ind][beta][(2*M_S+1)*j:(2*M_S+1)*(j+1)]
+                        for mode in range(0, M_S + 1):
+                            contribution = coef[M_S+mode] * (-1j)**(mode) * np.exp(1j * mode * angle)
+                            if mode>0:
+                                contribution+=coef[M_S-mode] * (-1j)**(-mode) * np.exp(-1j * mode * angle)*(-1)**(mode)
+                            KochinS[ind, beta, k] += contribution 
+                    KochinS[ind, beta, k]=KochinS[ind, beta, k]*(1j*w/g)*(1j*g/w) *k_factor
+                            # idx_mode = j * (2*M_S+1) + (mode + M_S)  
+                            # KochinS[ind, beta, k]+= (1j)**mode*(1j*w/g)  *np.conj(aS[ind][beta][idx_mode])*np.exp(-1j*mode*angle)
+        scale=1
+        # scale=np.sqrt(2/np.pi)*np.exp(1j*np.pi/4)
         # self.KochinR=np.sqrt(2/np.pi)*np.exp(1j*np.pi/4)*KochinR
-        self.KochinR=-KochinR/(4*np.pi)*scale
-        self.KochinS=-KochinS/(4*np.pi)*scale
+        self.KochinR=KochinR*scale
+        self.KochinS=KochinS*scale
         
 
     def FreeSurface(self, coord, Nx, Ny, Lx, Ly, Ne) : 
@@ -486,7 +508,7 @@ class MultiBody(object):
                             contribution = coef[M_R+mode] * Hm * np.exp(1j * mode * alpha)
                             if j==body : 
                                 Hm_i = jv(mode, k * L_i) + 1j * yv(mode, k * L_i) 
-                                contribution = coef_iso[M_R+mode] * Hm_i * np.exp(1j * mode * alpha_i)
+                                contribution += coef_iso[M_R+mode] * Hm_i * np.exp(1j * mode * alpha_i)
                             
                             if mode>0:
                                 contribution+=coef[M_R-mode] * Hm * np.exp(-1j * mode * alpha)*(-1)**(mode)
