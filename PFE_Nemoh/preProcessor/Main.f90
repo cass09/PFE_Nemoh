@@ -178,7 +178,7 @@
     ALLOCATE(NormalVelocity(Mesh%Npanels*2**Mesh%Isym,(Nbeta+Nradiation)*Nw))
     DO i=1,Nw
         DO j=1,Nbeta
-            CALL ComputeDiffractionCondition(ITsources, Mesh,w(i),Beta(j), j-int((Nbeta-1)/2), Environment,PRESSURE,NVEL)
+            CALL ComputeDiffractionCondition(ITsources, Mesh,w(i),Beta(j), j-int((Nbeta-1)/2)-1, Environment,PRESSURE,NVEL)
             DO c=1,Mesh%Npanels*2**Mesh%Isym
                 NormalVelocity(c,j+(i-1)*(Nbeta+Nradiation))=NVEL(c)
             END DO

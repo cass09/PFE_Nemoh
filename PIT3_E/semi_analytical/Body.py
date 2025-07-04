@@ -49,7 +49,7 @@ class Body(object):
                     (PhiS, PhiR, r, t, z) = Nemoh.ReadFieldPoints(dirFP, dof, freq, len(dirs), FieldPoints, self.convention)
                 else :
                     (SourcesS, SourcesR, centers, areas) = Nemoh.ReadSources(dirFP, dof, freq, len(dirs), BodyMesh, self.convention)
-                    print("SOURCES after reading")
+                    
         # Assign new atributes
         self.Fex = Fex ; self.Madd = Madd ; self.Crad = Crad ; self.dof = dof
         if dirFP and Method==0 : self.radius = r ; self.fpazimuth = t ; self.fpdepth = z

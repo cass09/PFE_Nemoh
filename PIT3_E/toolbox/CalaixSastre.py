@@ -133,7 +133,7 @@ def WNumber_E(period, depth, L, step = .001, kmax = 1000):
             else :
                 print('Fail evanescent')
                 break
-    return 2*pi/Le
+    return 2*np.pi/Le
 
 def len2(x):
     try:

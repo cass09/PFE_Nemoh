@@ -70,7 +70,7 @@ def transfers_sources(water_depth,
     a_s_scat = np.zeros((len(periods), source_scat.shape[1], 2*targ_order+1), dtype=complex)
     dirs, modes = np.meshgrid(directions, range(-targ_order, targ_order+1),
                               indexing='ij', sparse=True)
-    g=9081
+    g=9.81
     for ind, per in enumerate(periods):
         a_i_plane = np.exp(1j*modes*(np.pi/2.-dirs))
         Kw=(2.*np.pi/per)**2/g
@@ -79,22 +79,22 @@ def transfers_sources(water_depth,
         wave_cond = (water_depth, 2.*np.pi/per, k0)
         int_scat = integral_sources(wave_cond, BodyMesh, source_scat[ind], targ_order)
         int_rad = integral_sources(wave_cond, BodyMesh, source_rad[ind], targ_order)
+        # print("source_rad[ind]", source_rad[ind])
+        # print("int_rad", int_rad)
         a_s_rad_w=1j/2*C0*np.cosh(k0*water_depth)*int_rad
-        # print(a_s_rad)
+        # print("a_s_rad_w", a_s_rad_w)
         diffmat_w = 1j/2*C0*np.cosh(k0*water_depth)*int_scat
         # frcmat[ind] = np.linalg.lstsq(a_i_plane, fex[ind], rcond=None)[0]
-        frcmat[ind]=fex[ind]
+        # frcmat[ind]=fex[ind]
         # act_order[ind, 0], decimals[ind, 0] = max_trunc_order(a_s_scat[ind], targ_order, tol)
         act_order[ind, 0] = targ_order
         act_order[ind, 1], decimals[ind, 1] = max_trunc_order(a_s_rad[ind], targ_order, tol)
-        # for m in range(-targ_order, targ_order+1):
-        #     # a_s_rad[ind][:, m+targ_order]=(-1)**(-m)*(2.*np.pi/per)**2/g*np.conj(a_s_rad_w[:,-m+targ_order])
-        #     a_s_rad[ind][:, m+targ_order]=(-1)**(m)/g*(a_s_rad_w[:,m+targ_order])
-        #     for q in range(-targ_order, targ_order+1):
-        #         diffmat[ind][m+targ_order, q+targ_order] = (-1)**(q - m) *np.conj(diffmat_w[-m + targ_order, -q + targ_order])
-                # diffmat[ind][m+targ_order, q+targ_order] = (-1)**(m-q) *(diffmat_w[m + targ_order, q + targ_order])
+        for m in range(-targ_order, targ_order+1):
+            frcmat[ind][m+targ_order,:]=-1j*fex[ind][m+targ_order,:]*g/(2*np.pi/per)
+                #     # a_s_rad[ind][:, m+targ_order]=(-1)**(-m)*(2.*np.pi/per)**2/g*np.conj(a_s_rad_w[:,-m+targ_order])
+            a_s_rad[ind][:, m+targ_order]=(2*np.pi/per)**2/g*(a_s_rad_w[:,m+targ_order])
         diffmat[ind]=diffmat_w
-        a_s_rad[ind]=a_s_rad_w
+        # a_s_rad[ind]=-a_s_rad_w
     # print(diffmat.shape, a_i_plane_E.shape, coef_scat.shape)
     # print(frcmat.shape, coef_rad.shape)
     # print("G", frcmat[0], "aR", coef_rad[0])
