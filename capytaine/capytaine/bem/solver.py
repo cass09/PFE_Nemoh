@@ -393,6 +393,8 @@ class BEMSolver:
         with self.timer["  Green function"]:
             S, _ = self.green_function.evaluate(points, result.body.mesh_including_lid, result.free_surface, result.water_depth, result.encounter_wavenumber)
         potential = S @ result.sources  # Sum the contributions of all panels in the mesh
+        # print("sources", result.sources)
+        # print("phi", potential)
         return potential.reshape(output_shape)
 
     def _compute_potential_gradient(self, points, result):
@@ -490,6 +492,36 @@ class BEMSolver:
             fs_elevation = -1/result.g * (-1j*result.omega) * self.compute_potential(points, result)
 
         return fs_elevation.reshape(output_shape)
+    
+    def compute_cylsurface_elevation(self, points, result):
+        """Compute the value of the potential at given points for a previously solved potential flow problem.
+
+        Parameters
+        ----------
+        points: array of shape (2,) or (N, 2), or 2-ple of arrays returned by meshgrid, or cpt.Mesh or cpt.CollectionOfMeshes object
+            Coordinates of the point(s) at which the free surface elevation should be computed
+        result: LinearPotentialFlowResult
+            The return of the BEM solver
+
+        Returns
+        -------
+        complex-valued array of shape (1,) or (N,) or (nx, ny, nz) or (mesh.nb_faces,) depending of the kind of input
+            The value of the free surface elevation at the points
+
+        Raises
+        ------
+        Exception: if the :code:`LinearPotentialFlowResult` object given as input does not contain the source distribution.
+        """
+        points, output_shape = _normalize_points(points, keep_mesh=True)
+
+        if result.forward_speed != 0:
+            cylsurface = -1/result.g * (-1j*result.encounter_omega) * self.compute_potential(points, result)
+            nabla_phi = self._compute_potential_gradient(points, result)
+            cylsurface += -1/result.g * result.forward_speed * nabla_phi[..., 0]
+        else:
+            cylsurface = -1/result.g * (-1j*result.omega) * self.compute_potential(points, result)
+
+        return cylsurface.reshape(output_shape)
 
 
     ## Legacy

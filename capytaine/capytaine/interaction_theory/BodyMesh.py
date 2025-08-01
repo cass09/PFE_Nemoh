@@ -97,3 +97,26 @@ def get_panel_centers_cylindrical(meshfile_path):
 # print("Theta max (rad) :", theta.max())
 # print("Theta min (deg) :", np.degrees(theta.min()))
 # print("Theta max (deg) :", np.degrees(theta.max()))
+
+def OCmesh(R, Ntheta, Nz, depth):
+    # DO i=1,cyldZ
+    #         DO j=1,cyldTheta
+    #             IF (cyldZ .EQ. 1) THEN
+    #                 cylZ = 0
+    #             ELSE
+    #                 cylZ = -Environment%Depth*(1.-COS(PI/2.*(i-1.)/(cyldZ-1.)))
+    #             END IF
+    #             WRITE(11,'(3(X,E14.6))') cylR*COS(2.*PI*(j-1)/cyldTheta),cylR*SIN(2.*PI*(j-1)/cyldTheta),cylZ
+    #         END DO
+    #     END DO  
+    mesh=[]
+    for i in range(Nz):
+        for j in range(Ntheta):
+            if Nz==1:
+                z=0
+            else : 
+                z=-depth*(1-np.cos(np.pi/2*(i/(Nz-1))))
+            coord=[R*np.cos(2*np.pi*j/Ntheta), R*np.sin(2*np.pi*j/Ntheta), z]
+            mesh.append(coord)
+
+    return mesh

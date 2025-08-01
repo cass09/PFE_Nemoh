@@ -1,45 +1,46 @@
 {   
     "nemoh_project": {
-        "name": "C_BEM_barge_Nbeta13",
+        "name": "C_BEM_BargeX6_test",
         "folder": "/home/cassandra/Documents/PFE_MOREnergy/Nemoh_myVersion/capytaine/MyTestCases",
-        "mesh_filename": "barge.dat",
+        "mesh_filename": "BargeX6Y6H6SYMm6.dat",
         "mesh_type": "NEMOH"
     },
     "single_body_definition": {
-        "modes": [[1,1,0,0,0.0,0.0,0.0], [1,0,1,0,0.0,0.0,0.0], [1,0,0,1,0.0,0.0,0.0], [2,1,0,0,0.0,0.0,0.0], [2,0,1,0,0.0,0.0,0.0], [2,0,0,1,0.0,0.0,0.0]],
+        "comment": "keep the dof in order : Surge, Sway, Heave, Roll, Pitch, Yaw",
+        "DOF": ["Surge", "Sway", "Heave", "Roll", "Pitch", "Yaw"],
+        "rotation_center":[0, 0, 0],
         "spectral_param": {
             "_comment": "(format w [rad/s], f [Hz=1/s], T [s], k [1/m] or L [m])",
-            "min": 0.3,
-            "max": 2,
-            "number": 20,
-            "format": "w"
+            "min": 0.05,
+            "max": 0.5,
+            "number": 1,
+            "format": "f"
         },
         "direction": {
             "_comment": "min and max must be 0 and 360.0 DEG. (format DEG or RAD)",
             "min": 0.0,
             "max": 360.0,
-            "number": 13,
+            "number": 1,
             "format": "DEG"
         },
-        "water_depth": 20,
+        "water_depth": 12,
         "cylinder": {
             "_comment": "Radius should be at least 1 panel larger than the body mesh.",
-            "radius": 6.36,
-            "azimuthal_discretization": 31,
-            "depth_discretization": 29
+            "radius": 4
         },
-        "sources" : 1
+        "sources" : 0
     },
     "farm_definition": {
         "Configuration" : "",
-        "Type" : "Nb2_X",
+        "Type" : "Nb4_C",
         "N_bodies" : 1,
-        "body_dim" : 5,
+        "body_dim" : 3,
         "layout": [
-            {"name":"body1", "position": [0,0]}
+            {"name":"body1", "position": [0,0]},
+            {"name":"body1", "position": [20,0]}
         ], 
         "comment_RAO": "RAO calculation running only with 6 DOF",
-        "RAO" : false,
+        "RAO" : true,
         "Kochin": {
             "_comment": "(format DEG or RAD)",
             "min": 0.0,
@@ -49,9 +50,9 @@
         },
         "Free_surface": {
             "Nx": 0,
-            "Ny": 60,
-            "Lx": 100,
-            "Ly": 30
+            "Ny": 10,
+            "Lx": 50,
+            "Ly": 10
         }
     }
 }

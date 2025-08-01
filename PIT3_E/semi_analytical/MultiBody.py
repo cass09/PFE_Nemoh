@@ -457,6 +457,7 @@ class MultiBody(object):
         # print("aR", len(aR), len(aR[0]), len(aR[0][0]), len(aR[0][0][0]))
         # print("aR iso", AR_iso.shape)
         aS=self.aS
+        AS_iso = self.Body.AS
         k0=self.wnumber
         kl=self.wnumber_E
         depth=self.depth
@@ -472,7 +473,8 @@ class MultiBody(object):
         phiS = np.zeros((Nfreq, Ndir, Nx, Ny), dtype=complex)
         ETA_S = np.zeros_like(phiS)
         g = 9.81
-
+        # print("iso", AS_iso[0][0])
+        # print("MB", aS)
         x = np.linspace(-Lx/2, Lx/2, Nx)
         y = np.linspace(-Ly/2, Ly/2, Ny)
         X, Y = np.meshgrid(x, y, indexing='ij')  # (Nx, Ny)
@@ -516,46 +518,60 @@ class MultiBody(object):
                                     contribution+=coef_iso[M_R-mode] * Hm_i * np.exp(-1j * mode * alpha_i)*(-1)**(mode)
                             if Ne>0:
                                 for l in range(1, Ne+1) :
-                                    # Km=kv(mode, kll[l-1]*L)
+                                    Km=kv(mode, kll[l-1]*L)
                                     if j==body :
                                         Km_i=kv(mode, kll[l-1]*L_i)
                                         coef_E_iso=(AR_iso[ind][dof][(2*M_R+1)*l:(2*M_R+1)*(l+1)])
                                         contribution += coef_E_iso[M_R+mode] * Km_i * np.cos(kll[l-1]*depth) * np.exp(1j * mode * alpha_i)
-                                    # coef_E=(aR[ind][dof][body][(2*M_R+1)*(j*(Ne+1)+l):(2*M_R+1)*(j*(Ne+1)+l+1)])
-                                    # contribution += coef_E[M_R+mode] * Km * np.cos(kll[l-1]*depth) * np.exp(1j * mode * alpha)
+                                    coef_E=(aR[ind][dof][body][(2*M_R+1)*(j*(Ne+1)+l):(2*M_R+1)*(j*(Ne+1)+l+1)])
+                                    contribution += coef_E[M_R+mode] * Km * np.cos(kll[l-1]*depth) * np.exp(1j * mode * alpha)
                                     if mode>0:
-                                        # contribution+=coef_E[M_R-mode] * Km * np.cos(kll[l-1]*depth) * np.exp(-1j * mode * alpha)*(-1)**(mode)
+                                        contribution+=coef_E[M_R-mode] * Km * np.cos(kll[l-1]*depth) * np.exp(-1j * mode * alpha)*(-1)**(mode)
                                         if j==body :
                                             contribution+=coef_E_iso[M_R-mode] * Km_i * np.cos(kll[l-1]*depth) * np.exp(-1j * mode * alpha_i)*(-1)**(mode)
                             
                             ETA_R[ind, index] += contribution   # for each dof and each body
                             phiR[ind] += contribution           # sum of every radiation problem
-                                    
-            # for diffraction problem
+                                
             for beta in range(Ndir):
                 for j in range(Nb):  
                     dx = X - coord[j, 0]
                     dy = Y - coord[j, 1]
                     L = np.sqrt(dx**2 + dy**2)
                     alpha = np.arctan2(dy, dx)
-                    coef=aS[ind][beta][(2*M_S+1)*j:(2*M_S+1)*(j+1)]
+                    if Nb==1:
+                        coef=AS_iso[ind][beta][(2*M_S+1)*j*(Ne+1):(2*M_S+1)*(j*(Ne+1)+1)]
+                    else :
+                        coef=aS[ind][beta][(2*M_S+1)*j*(Ne+1):(2*M_S+1)*(j*(Ne+1)+1)]
+                    # print("ici", aS)
                     for mode in range(0, M_S + 1):
                         Hm = jv(mode, k * L) + 1j * yv(mode, k * L)
                         contribution = coef[M_S+mode] * Hm * np.exp(1j * mode * alpha)
                         if mode>0:
                             contribution+=coef[M_S-mode] * Hm * np.exp(-1j * mode * alpha)*(-1)**(mode)
                         # contribution = ((-1)**(-mode))*(g/w)*(1j*aS[ind][beta][idx_mode]) * Hm * np.exp(-1j * mode * alpha)
+                        if Ne>0:
+                            for l in range(1, Ne+1) :
+                                Km=kv(mode, kll[l-1]*L)
+                                if Nb==1:
+                                    coef_E=(AS_iso[ind][beta][(2*M_R+1)*(j*(Ne+1)+l):(2*M_R+1)*(j*(Ne+1)+l+1)])
+                                else :
+                                    coef_E=(aS[ind][beta][(2*M_R+1)*(j*(Ne+1)+l):(2*M_R+1)*(j*(Ne+1)+l+1)])
+                                contribution += coef_E[M_S+mode] * Km * np.cos(kll[l-1]*depth) * np.exp(1j * mode * alpha)
+                                if mode>0:
+                                    contribution+=coef_E[M_S-mode] * Km * np.cos(kll[l-1]*depth)* np.exp(-1j * mode * alpha)*(-1)**(mode)
                         phiS[ind, beta] += contribution
 
             # normalization
             # *(1j*g/w) pour phi et *(-1j * w / g) pour ETA
-            ETA_R[ind] *= (-1j*g/w) *(-1j*w/g) /(1j*w) #/2
+            ETA_R[ind] *= (-1j*g/w) *(-1j*w/g) /(1j*w)
             ETA_S[ind] = phiS[ind]*(1j*g/w)* (-1j * w / g)
 
             # calcul of the total potential
             for beta in range(Ndir):
                 phiI = np.exp(1j * k * (X * np.cos(direction[beta]) + Y * np.sin(direction[beta])))
-                ETA[ind, beta] = (phiS[ind, beta] + phiR[ind]+phiI) #* (1j * w / g)
+                # ETA[ind, beta] = (phiS[ind, beta] + phiR[ind]+phiI) #* (1j * w / g)
+                ETA[ind, beta] = phiI #* (1j * w / g)
             
         self.ETA=ETA
         self.ETA_R=ETA_R 

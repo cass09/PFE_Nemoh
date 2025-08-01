@@ -753,7 +753,67 @@ respective inertia coefficients are assigned as NaN.")
             self.inertia_matrix = hydrostatics["inertia_matrix"] = self.compute_rigid_body_inertia(rho=rho)
 
         return hydrostatics
+        
+    def build_inertia_matrix_from_translated_bodies(self, coord2d):
+        """
+        Construit la matrice d'inertie globale (bloc diagonale) en translatant le même corps à différentes positions.
 
+        Parameters
+        ----------
+        body : FloatingBody
+            Le corps de base, non translaté.
+        coord : list of (x, y, z)
+            Liste des positions absolues pour chaque copie du corps.
+
+        Returns
+        -------
+        global_inertia : ndarray
+            Matrice d'inertie globale (6N x 6N)
+        """
+        N = len(coord2d)
+        global_inertia = np.zeros((6 * N, 6 * N))
+        coord = [(x, y, 0) for (x, y) in coord2d]
+        for i, pos in enumerate(coord):
+            translated_body = self.copy()
+            translated_body.translate(pos)  # utilise ta méthode propre
+
+            I = np.array(translated_body.compute_rigid_body_inertia())
+            i0 = 6 * i
+            global_inertia[i0:i0 + 6, i0:i0 + 6] = I
+
+        return global_inertia
+
+    def build_hydrostatic_stiffness_from_translated_bodies(self, coord2d):
+        """
+        Construit la matrice de raideur hydrostatique globale (bloc diagonale) en translatant le corps.
+
+        Parameters
+        ----------
+        body : FloatingBody
+            Le corps de base à dupliquer et translater.
+        coord : list of (x, y, z)
+            Positions absolues de chaque copie du corps.
+
+        Returns
+        -------
+        global_stiffness : ndarray
+            Matrice globale de raideur hydrostatique (6N x 6N)
+        """
+        N = len(coord2d)
+        global_stiffness = np.zeros((6 * N, 6 * N))
+        coord = [(x, y, 0) for (x, y) in coord2d]
+        for i, pos in enumerate(coord):
+            translated_body = self.copy()
+            translated_body.translate(pos)
+
+            K = np.array(translated_body.immersed_part().compute_hydrostatic_stiffness())
+            i0 = 6 * i
+            global_stiffness[i0:i0 + 6, i0:i0 + 6] = K
+
+        return global_stiffness
+
+
+   
 
     ###################
     # Transformations #
@@ -1207,3 +1267,5 @@ respective inertia coefficients are assigned as NaN.")
             all_buoys.name = name
 
         return all_buoys
+        
+

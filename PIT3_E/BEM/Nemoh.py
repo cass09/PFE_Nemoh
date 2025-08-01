@@ -408,6 +408,7 @@ def ReadFieldPoints(directory, DOF, freq, Nd, FieldPoints, convention = 'N') :
     # get FieldPoints
     z = FieldPoints[0,:,2]
     th = np.linspace(0, 2*pi, Nth, endpoint = False)
+    print("th", Nth, th)
     del(burn)
     # PhiR_W = 1j*freq*conj(Phirad_N)
     for ind, fr in enumerate(freq):

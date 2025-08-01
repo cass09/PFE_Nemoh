@@ -1,6 +1,6 @@
 import numpy as np
 
-def write_nemoh_parallelepiped_mesh(Geo, Lx=3, Ly=2, Lz=1, ndiv=3, nom="barge", SYM=False):
+def write_nemoh_parallelepiped_mesh(Geo, Lx=3, Ly=2, Lz=1, ndiv=3, nom="barge", SYM=False, lid=False):
     """
     Génère un pavé rectangulaire (Lx × Ly × Lz) maillé en rectangles sur chaque face,
     et l'écrit au format mesh.dat de Nemoh.
@@ -31,12 +31,13 @@ def write_nemoh_parallelepiped_mesh(Geo, Lx=3, Ly=2, Lz=1, ndiv=3, nom="barge", 
         return face_nodes
 
     faces = []
-    # faces.append(add_face_nodes(0, step_x, step_y, (0, 1, 2)))       # z = 0
     faces.append(add_face_nodes(-Lz, step_x, step_y, (0, 1, 2)))      # z = -Lz
     faces.append(add_face_nodes(0, step_y, step_z, (1, 2, 0)))       # x = 0
     faces.append(add_face_nodes(Lx, step_y, step_z, (1, 2, 0)))      # x = Lx
     faces.append(add_face_nodes(0, step_x, step_z, (0, 2, 1)))       # y = 0
     faces.append(add_face_nodes(Ly, step_x, step_z, (0, 2, 1)))      # y = Ly
+    if lid :
+        faces.append(add_face_nodes(0, step_x, step_y, (0, 1, 2)))       # z = 0
 
     all_nodes = sum(faces, [])
     node_map = {}
@@ -51,7 +52,7 @@ def write_nemoh_parallelepiped_mesh(Geo, Lx=3, Ly=2, Lz=1, ndiv=3, nom="barge", 
     offset = 0
     face_size = (ndiv + 1) ** 2
 
-    for face in faces:
+    for face_idx, face in enumerate(faces):
         for i in range(ndiv):
             for j in range(ndiv):
                 n1 = offset + i * (ndiv + 1) + j
@@ -61,7 +62,16 @@ def write_nemoh_parallelepiped_mesh(Geo, Lx=3, Ly=2, Lz=1, ndiv=3, nom="barge", 
                 nodes_idx = [n1, n2, n3, n4]
                 if not SYM or all(all_nodes[k][1] >= 0 for k in nodes_idx):
                     try:
-                        elements.append(tuple(node_map[k] for k in nodes_idx))
+                        # elements.append(tuple(node_map[k] for k in nodes_idx))
+                        quad = tuple(node_map[k] for k in nodes_idx)
+
+                        # 🔁 Inverser certaines faces selon leur orientation
+                        # face_idx: 0 = z=-Lz (fond), 1 = x=0, 2 = x=Lx, 3 = y=0, 4 = y=Ly
+                        if face_idx in [1, 4]:  # Ces faces doivent être inversées
+                            quad = quad[::-1]
+                        if lid and face_idx in [5]:
+                            quad = quad[::-1]
+                        elements.append(quad)
                     except KeyError:
                         continue  # Si un noeud est absent car x < 0
         offset += face_size
@@ -69,6 +79,7 @@ def write_nemoh_parallelepiped_mesh(Geo, Lx=3, Ly=2, Lz=1, ndiv=3, nom="barge", 
     n_nodes = len(filtered_nodes)
     n_elements = len(elements)
     suffix = "SYM" if SYM else ""
+    suffix += "_lid" if lid else ""
     if Geo :
         filename = f"{nom}X{Lx}Y{Ly}H{Lz}{suffix}"
 
@@ -100,5 +111,5 @@ def write_nemoh_parallelepiped_mesh(Geo, Lx=3, Ly=2, Lz=1, ndiv=3, nom="barge", 
     print(f"✅ '{filename}' créé avec {n_nodes} noeuds et {n_elements} éléments.")
 
 # 🔧 Exemple d'utilisation :
-write_nemoh_parallelepiped_mesh(Geo=False, Lx=6, Ly=6, Lz=6, ndiv=29, nom="barge", SYM=True)
+write_nemoh_parallelepiped_mesh(Geo=False, Lx=6, Ly=6, Lz=6, ndiv=29, nom="Barge", SYM=True, lid=True)
 

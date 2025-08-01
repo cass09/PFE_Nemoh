@@ -18,7 +18,7 @@ import cmath
 import os
 import json
 
-project_data = json.load(open('project_definition.json', 'r'))
+project_data = json.load(open('project_definition2.json', 'r'))
 
 #################################################################
 #################################################################
@@ -170,7 +170,7 @@ if betas['format'] == 'DEG':
 print("Nbeta system : ", len(directionMB))
 
 
-param_distance=1
+param_distance=2
 limite=1023
 # radius_barge=6.36
 diameter= 2*body_def['cylinder']['radius']
@@ -200,7 +200,7 @@ while param_distance<=limite :
             distance=0
         print("Type configuration", farm["Type"])
         coord = CIT.CreateConfig(N_bodies, radius_a*distance, farm["Type"])
-        limite=10
+        limite=16
     else :
         layout = farm['layout']
         print("Nb : ", len(layout))
@@ -213,8 +213,9 @@ while param_distance<=limite :
         if len(coord)>1 :
             distance = np.linalg.norm(coord[1] - coord[0])
             print(f"Distance between the two bodies center : {distance}")
-            distance = distance - diameter
-            print(f"Distance between the two bodies : {distance}")
+            # distance = distance - farm["body_dim"]*2
+            a=farm["body_dim"]
+            print(f"Distance between the two bodies : {distance- a*2}")
         else :
             distance=0
         param_distance=limite+1
@@ -266,7 +267,7 @@ while param_distance<=limite :
         out=plot.PlotData(WECArr, farm, distance, directionMB, farm['Plot_DOF'], PlotFolder)
     
     if farm['Configuration']=="d/a":
-        param_distance=param_distance+1
+        param_distance=param_distance*2
     else :
         param_distance=param_distance*2
 

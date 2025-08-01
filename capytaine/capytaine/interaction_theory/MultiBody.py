@@ -350,7 +350,7 @@ class MultiBody(object):
         #         f.write(line + "\n")
         return T
     
-    def RAO(self, directory) : 
+    def RAO(self, directory, Mass, Kh) : 
         Madd=self.Madd
         Crad=self.Crad
         Fex=self.Fex
@@ -358,11 +358,11 @@ class MultiBody(object):
         Nfreq = freq.shape[0]
         Ndir = Fex.shape[1]  
         Ndof = Fex.shape[2]  # 6*n bodies 
-        Mass=0
+        # Mass=0
         if len(glob(os.path.join(directory,'Inertia.dat'))) > 0 :
             with open(os.path.join(directory,'Inertia.dat'), 'r') as f_Mass :
                 Mass = np.loadtxt(f_Mass)
-        Kh=0
+        # Kh=0
         if len(glob(os.path.join(directory,'Kh.dat'))) > 0 :
             with open(os.path.join(directory,'Kh.dat'), 'r') as f_Kh :
                 Kh = np.loadtxt(f_Kh)

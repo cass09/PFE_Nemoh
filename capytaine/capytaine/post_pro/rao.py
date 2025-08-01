@@ -58,3 +58,77 @@ def rao(dataset, wave_direction=None, dissipation=None, stiffness=None):
     rao = xr.DataArray(np.linalg.solve(H.values, fex.values[..., np.newaxis])[..., 0], coords=rao_coords, dims=rao_dims)
 
     return rao
+
+def compute_rao_from_results(results_data, omega_list, directions, inertia_matrix, hydrostatic_stiffness, 
+                             dissipation=None, extra_stiffness=None, vect_dof=None):
+    """
+    Calcule le RAO à partir d'une liste results_data (sans xarray).
+
+    Parameters
+    ----------
+    results_data : list
+        Liste des dictionnaires résultats (diffraction/radiation) pour chaque omega et direction.
+    omega_list : list or array
+        Liste des fréquences.
+    directions : list or array
+        Liste des directions de houle.
+    inertia_matrix : ndarray
+        Matrice d’inertie (NxN).
+    hydrostatic_stiffness : ndarray
+        Matrice de raideur hydrostatique (NxN).
+    dissipation : ndarray, optional
+        Matrice d’amortissement additionnel (e.g. PTO).
+    extra_stiffness : ndarray, optional
+        Matrice de raideur additionnelle (e.g. amarrage).
+    vect_dof : list of str
+        Liste des DOFs (ordre cohérent avec les matrices).
+
+    Returns
+    -------
+    RAO : dict
+        RAO[omega][beta] = vector (complex)
+    """
+
+    N_dof = len(vect_dof)
+    RAO = {}
+
+    for w in omega_list:
+        RAO[w] = {}
+
+        # Initialiser matrices radiation
+        B = np.zeros((N_dof, N_dof))
+        A = np.zeros((N_dof, N_dof))
+        # Chercher les résultats radiation pour cette fréquence
+        for res in results_data:
+            if res['type'] == 'radiation' and np.isclose(res['omega'], w):
+                i = vect_dof.index(res['dof'])
+                for j, dof_j in enumerate(vect_dof):
+                    B[i, j] = res['damping'].get(dof_j, 0.0)
+                    A[i, j] = res['added_mass'].get(dof_j, 0.0)
+
+        M = np.array(inertia_matrix)
+        K = np.array(hydrostatic_stiffness)
+        if extra_stiffness is not None:
+            K += extra_stiffness
+        if dissipation is not None:
+            B += dissipation
+
+        H = -w**2 * (M + A) + 1j * w * B + K
+
+        for beta in directions:
+            # Force d'excitation
+            F_exc = np.zeros(N_dof, dtype=complex)
+            for res in results_data:
+                if res['type'] == 'diffraction' and np.isclose(res['omega'], w) and np.isclose(res['beta'], beta):
+                    for i, dof in enumerate(vect_dof):
+                        F_exc[i] = res['excitation_force'].get(dof, 0.0)
+
+            # Résolution du système
+            try:
+                RAO_wb = np.linalg.solve(H, F_exc)
+            except np.linalg.LinAlgError:
+                RAO_wb = np.full(N_dof, np.nan, dtype=complex)
+
+            RAO[w][beta] = RAO_wb
+
+    return RAO

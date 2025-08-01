@@ -27,8 +27,8 @@ def CreateConfig(Nb, Distance, type):
         coord[1, :] = [(Distance)*np.sqrt(3)/2, (Distance)/2]
         coord[2, :] = [(Distance)*np.sqrt(3)/2, -(Distance)/2]
     elif type=="Nb4_C" : 
-        coord[0, :] = [-(Distance)/2, -(Distance)/2]
-        coord[1, :] = [-(Distance)/2, (Distance)/2]
-        coord[2, :] = [(Distance)/2, (Distance)/2]
-        coord[3, :] = [(Distance)/2, -(Distance)/2]
+        coord[0, :] = [-int(Distance/2), -int(Distance/2)]
+        coord[1, :] = [-int(Distance/2), int(Distance/2)]
+        coord[2, :] = [int(Distance/2), -int(Distance/2)]
+        coord[3, :] = [int(Distance/2), int(Distance/2)]
     return coord[:,:]

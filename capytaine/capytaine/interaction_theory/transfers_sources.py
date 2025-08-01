@@ -323,7 +323,7 @@ def integral_sources_E(wave_cond, BodyMesh, source, L, trunc_ord):
     K=w**2/g
     for l in range(L) : 
         kl=WNumber_E(2*np.pi/w, water_depth, l+1, One=True)
-        Cn=(K**2+kl**2)/((kl**2+K**2)*water_depth-K**2)
+        Cn=(K**2+kl**2)/((kl**2+K**2)*water_depth-K)
         cosz = np.cos(kl * (z + water_depth))
 
         # Pour chaque m, calcule les termes communs

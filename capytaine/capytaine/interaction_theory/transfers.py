@@ -16,18 +16,17 @@ presented by McNatt using standard BEM outputs.
 from math import log
 import numpy as np
 from scipy.special import jv, yv, iv, kv
-from toolbox.CalaixSastre import WNumber, WNumber_E
+from capytaine.bem.cylindrical_waves import WNumber_E
 
 def transfers(water_depth,
               directions,
               periods,
+              wavenumber,
               discrete_cyl,
               vpot_scat,
               vpot_rad,
               fex,
               tol,
-              convention,
-              Evanescent,
               Nmodes_E):
     """ Computes cylindrical amplitude coefficients from the velocity
     potential values on a cylinder.
@@ -74,7 +73,7 @@ def transfers(water_depth,
     targ_order = int((len(directions)-1)/2)
     act_order = np.zeros((len(periods), 2), dtype=int)
     decimals = np.zeros((len(periods), 2), dtype=int)
-    if Evanescent :
+    if Nmodes_E>0 :
         diffmat = np.zeros((len(periods), (2*targ_order+1)*(Nmodes_E+1), (2*targ_order+1)*(Nmodes_E+1)), dtype=complex)
         frcmat = np.zeros((len(periods), (2*targ_order+1)*(Nmodes_E+1), fex.shape[-1]), dtype=complex)
         b_s_rad = np.zeros((len(periods), fex.shape[-1], (2*targ_order+1)*Nmodes_E), dtype=complex)
@@ -89,45 +88,43 @@ def transfers(water_depth,
     dirs, modes = np.meshgrid(directions, range(-targ_order, targ_order+1),
                               indexing='ij', sparse=True)
     
-        
-    wave_number_e=WNumber_E(periods, water_depth, Nmodes_E)
+    # kl=WNumber_E(2*np.pi/w, water_depth, l+1, One=True)
+    wave_number_e=WNumber_E(periods, water_depth, Nmodes_E, One=False)
     for ind, per in enumerate(periods):
         # print(ind, per)
-        wave_cond = (water_depth, 2.*np.pi/per, WNumber(per, water_depth))
+        wave_cond = (water_depth, 2.*np.pi/per, wavenumber[ind])
+        vpot_rad[ind]*=1j/(2.*np.pi/per) # Capytaine convention ?
         # print(vpot_rad[ind])
-        a_s_scat[ind] = bem2cyl(wave_cond, discrete_cyl, vpot_scat[ind], targ_order, convention)
-        a_s_rad[ind] = bem2cyl(wave_cond, discrete_cyl, vpot_rad[ind], targ_order, convention)
-        # print("aR", a_s_rad[ind])
-        
+        a_s_scat[ind] = bem2cyl(wave_cond, discrete_cyl, vpot_scat[ind], targ_order)
+        a_s_rad[ind] = bem2cyl(wave_cond, discrete_cyl, vpot_rad[ind], targ_order)
+        # print("aR apres", a_s_rad[ind])
         # for evanescent waves
-        if Evanescent : 
+        if Nmodes_E>0 : 
             wave_cond_E = (water_depth, 2.*np.pi/per, wave_number_e[ind])
-            b_s_scat[ind] = bem2cyl_ev(wave_cond_E, discrete_cyl, vpot_scat[ind], targ_order, convention)
+            b_s_scat[ind] = bem2cyl_ev(wave_cond_E, discrete_cyl, vpot_scat[ind], targ_order)
             # b_s_scat = np.zeros((11, (2*targ_order+1)*Nmodes_E), dtype=complex)
-            b_s_rad[ind] = bem2cyl_ev(wave_cond_E, discrete_cyl, vpot_rad[ind], targ_order, convention)
+            b_s_rad[ind] = bem2cyl_ev(wave_cond_E, discrete_cyl, vpot_rad[ind], targ_order)
         
-        if convention == 'N':
-            a_i_plane = np.exp(1j*modes*(np.pi/2.-dirs))
-            # print("a_I", a_i_plane.shape)
-            if Evanescent : 
-                a_i_plane_E = np.zeros((a_i_plane.shape[0], a_i_plane.shape[1] * (Nmodes_E+1)), dtype=complex)
-                # print("a_I", a_i_plane.shape, a_i_plane_E.shape)
-                a_i_plane_E[:, 0:a_i_plane.shape[1]] = a_i_plane
-                for l in range(1, Nmodes_E+1):
-                    start = l * a_i_plane.shape[1]
-                    end = start + a_i_plane.shape[1]
-                    a_i_plane_E[:, start:end] = a_i_plane*np.exp(-1j*wave_number_e[ind][l-1])
-                    # a_i_plane_E[:, start:end] = a_i_plane*np.exp(-1j*l*(np.pi/2.-dirs))
-                    # start = l * a_i_plane.shape[1]
-                    # for j in range(a_i_plane.shape[1]):
-                    #     # vecteur unitaire de taille N_dir
-                    #     a_i_plane_E[:, start + j] = np.eye(a_i_plane.shape[0], dtype=complex)[:, j % a_i_plane.shape[0]]
-                    # a_i_plane_E[:, start:end] = 0
-        else:
-            a_i_plane = np.exp(-1j*modes*(np.pi/2.+dirs))
+        a_i_plane = np.exp(1j*modes*(np.pi/2.-dirs))
+        # print("a_I", a_i_plane.shape)
+        if Nmodes_E>0 : 
+            a_i_plane_E = np.zeros((a_i_plane.shape[0], a_i_plane.shape[1] * (Nmodes_E+1)), dtype=complex)
+            # print("a_I", a_i_plane.shape, a_i_plane_E.shape)
+            a_i_plane_E[:, 0:a_i_plane.shape[1]] = a_i_plane
+            for l in range(1, Nmodes_E+1):
+                start = l * a_i_plane.shape[1]
+                end = start + a_i_plane.shape[1]
+                a_i_plane_E[:, start:end] = a_i_plane*np.exp(-1j*wave_number_e[ind][l-1])
+                # a_i_plane_E[:, start:end] = a_i_plane*np.exp(-1j*l*(np.pi/2.-dirs))
+                # start = l * a_i_plane.shape[1]
+                # for j in range(a_i_plane.shape[1]):
+                #     # vecteur unitaire de taille N_dir
+                #     a_i_plane_E[:, start + j] = np.eye(a_i_plane.shape[0], dtype=complex)[:, j % a_i_plane.shape[0]]
+                # a_i_plane_E[:, start:end] = 0
 
-        if not Evanescent :
+        if Nmodes_E==0 :
             diffmat[ind] = np.linalg.lstsq(a_i_plane, a_s_scat[ind], rcond=None)[0]
+            # diffmat[ind] = diffmat[ind]/(2.*np.pi/per)
             frcmat[ind] = np.linalg.lstsq(a_i_plane, fex[ind], rcond=None)[0]
             act_order[ind, 0], decimals[ind, 0] = max_trunc_order(a_s_scat[ind], targ_order, tol)
             act_order[ind, 1], decimals[ind, 1] = max_trunc_order(a_s_rad[ind], targ_order, tol)
@@ -164,7 +161,7 @@ def transfers(water_depth,
     fin = ini+2*act_order.max()+1
     # print(diffmat.shape, ini, fin)
     # print(act_order.shape, act_order)
-    if Evanescent : 
+    if Nmodes_E>0 : 
         order=act_order # use only in Interaction for MB reduction (not done when E)
         act_order[:]=targ_order
         return (diffmat.round(decimals.max()),
@@ -174,10 +171,10 @@ def transfers(water_depth,
                 act_order.max(axis=0),
                 order)
     else : 
-        return (diffmat[:, ini:fin, ini:fin].round(decimals.max()),
-                frcmat[:, ini:fin, :].round(decimals.max()),
-                a_s_rad[:, :, ini:fin].round(decimals.max()),
-                a_s_scat[:, :, ini:fin].round(decimals.max()),
+        return (diffmat[:, ini:fin, ini:fin],
+                frcmat[:, ini:fin, :],
+                a_s_rad[:, :, ini:fin],
+                a_s_scat[:, :, ini:fin],
                 act_order.max(axis=0),
                 act_order)
    
@@ -214,8 +211,7 @@ def max_trunc_order(a_prob,
 def bem2cyl(wave_cond,
             discrete_cyl,
             vpot_cyl,
-            trunc_ord,
-            convention):
+            trunc_ord):
     """ Computes cylindrical amplitude coefficients from the velocity
     potential values on a cylinder.
 
@@ -249,8 +245,11 @@ def bem2cyl(wave_cond,
                       Total number of wave modes is 2*trunc_ord+1
     :type trunc_ord: int
     """
+    # print("------------------")
     (water_depth, cfreq, wnum) = wave_cond
     (radius_cyl, azimuth_cyl, axial_cyl) = discrete_cyl
+    azimuth_cyl = np.linspace(0, 2*np.pi, len(azimuth_cyl), endpoint = False)   
+    # azimuth_cyl += np.random.uniform(-1e-6, 1e-6, size=azimuth_cyl.shape)
     dz = axial_cyl[1:]-axial_cyl[:-1]
     dth = azimuth_cyl[1]-azimuth_cyl[0] # equispaced is assumed
     rightz = all(dz > 0)
@@ -266,37 +265,38 @@ def bem2cyl(wave_cond,
         # print("integrand", (integrand[:, :, 1:]+integrand[:, :, :-1])[0])
         # Integrate along th
         int_th = (integrand[:, :, 1:]+integrand[:, :, :-1]).sum(axis=2)*.5*dth
+        
+        # print("int_th0", int_th[0])
+
         if not rightth2: # add last paralepipede
             int_th += (integrand[:, :, 0]+integrand[:, :, -1])*.5*dth
         if not rightth:
             int_th *= -1
         # print("int_th", int_th[0])
+
         # Integrate I_th along z
         int_th_z = ((int_th[:, 1:]+int_th[:, :-1])*dz).sum(axis=1)*.5
         if not rightz:
             int_th_z *= -1
+        # print("int_th_z", int_th_z[0])
+
         # Cm
         cntm = -1j*cfreq/(2*np.pi*9.809)
-        if convention == 'N':
-            cntm *= -1
+        cntm *= -1
         cntm *= 2*np.cosh(wnum*water_depth)
         cntm /= water_depth*(1+np.sinh(2*wnum*water_depth)/(2*wnum*water_depth))
-        if convention == 'N':
-            cntm /= jv(mode, wnum*radius_cyl)+1j*yv(mode, wnum*radius_cyl)
-        else:
-            cntm /= jv(mode, wnum*radius_cyl)-1j*yv(mode, wnum*radius_cyl)
+        cntm /= jv(mode, wnum*radius_cyl)+1j*yv(mode, wnum*radius_cyl)
+        # print(cntm)
         # amplitude coefficients
         a_s[:, n_mode] = cntm*int_th_z
-        # print("as", a_s[:, n_mode])
-
+    # print("aR avant", a_s)
     return a_s
 
     
 def bem2cyl_ev(wave_cond,
             discrete_cyl,
             vpot_cyl,
-            trunc_ord,
-            convention):
+            trunc_ord):
     """ Computes cylindrical amplitude coefficients from the velocity
     potential values on a cylinder.
 
@@ -358,8 +358,7 @@ def bem2cyl_ev(wave_cond,
                 int_th_z *= -1
             # Cm
             cntm = -1j*cfreq/(2*np.pi*9.809)
-            if convention == 'N':
-                cntm *= -1
+            cntm *= -1
             cntm *= 2
             cntm /= water_depth*(1+np.sin(2*wnum[l_mode]*water_depth)/(2*wnum[l_mode]*water_depth))
             cntm /= kv(mode, wnum[l_mode]*radius_cyl)

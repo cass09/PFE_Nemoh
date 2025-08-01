@@ -154,7 +154,11 @@ def WriteData(WECArr, directionMB, farm, distance, results, results_h5, Motion, 
             y = np.linspace(-Ly/2, Ly/2, Ny)
             for ind, period in enumerate(w): 
                 for dir in range(len(WECArr.ETA_S[0, :, 0, 0])):
-                    FS_file_path = os.path.join(Motion,  f"Global_{test}FS_{type}{beta_value}d{config_d}{distance:.2f}_pb{ind_pb:05d}.dat")
+                    if len(WECArr.ETA_S[0, :, 0, 0])==1:
+                        numbeta=""
+                    else : 
+                        numbeta=f"beta{dir+1}_"
+                    FS_file_path = os.path.join(Motion,  f"Global_{test}FS_{type}{numbeta}d{config_d}{distance:.2f}_pb{ind_pb:05d}.dat")
                     with open(FS_file_path, "w") as FS_file:
                         for i in range(Nx):  
                             for j in range(Ny):  
@@ -167,7 +171,7 @@ def WriteData(WECArr, directionMB, farm, distance, results, results_h5, Motion, 
                                 FS_file.write("\n")
                     ind_pb=ind_pb+1
                 for dof in range(len(WECArr.ETA_R[0, :, 0, 0])): 
-                    FS_file_path = os.path.join(Motion,  f"Global_{test}FS_{type}{beta_value}d{config_d}{distance:.2f}_pb{ind_pb:05d}.dat")
+                    FS_file_path = os.path.join(Motion,  f"Global_{test}FS_{type}d{config_d}{distance:.2f}_pb{ind_pb:05d}.dat")
                     with open(FS_file_path, "w") as FS_file:
                         for i in range(Nx):  
                             for j in range(Ny):  
@@ -183,7 +187,11 @@ def WriteData(WECArr, directionMB, farm, distance, results, results_h5, Motion, 
             ind_pb=1  
             for ind, period in enumerate(w): 
                 for dir in range(len(WECArr.ETA[0, :, 0, 0])):
-                    ETA_file_path = os.path.join(Motion,  f"Global_{test}ETA_{type}{beta_value}d{config_d}{distance:.2f}_pb{ind_pb:05d}.dat")
+                    if len(WECArr.ETA_S[0, :, 0, 0])==1:
+                        numbeta=""
+                    else : 
+                        numbeta=f"beta{dir+1}_"
+                    ETA_file_path = os.path.join(Motion,  f"Global_{test}ETA_{type}{numbeta}d{config_d}{distance:.2f}_pb{ind_pb:05d}.dat")
                     with open(ETA_file_path, "w") as FS_file:
                         FS_file.write(f"w={period:.4f}  ")  
                         FS_file.write(f"beta={directionMB[dir]:.4f}  ")  

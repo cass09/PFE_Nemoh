@@ -3,7 +3,7 @@ import cmath
 import os
 import h5py
 
-def WriteData(WECArr, directionMB, farm, distance, results, results_h5, Motion):
+def WriteData(WECArr, directionMB, farm, distance, results, results_h5, Motion, Method):
     
     w = 2*np.pi/WECArr.period
     FR = 1j*w.T*WECArr.Madd.T + WECArr.Crad.T
@@ -20,10 +20,11 @@ def WriteData(WECArr, directionMB, farm, distance, results, results_h5, Motion):
         type=farm["Type"] + "_"
     else :
         type=""
+    test=""
+    if Method==1 :
+        test= f"{test}S_"
     if farm['Ne_modes']>0 : 
-        test= f"S_E{farm['Ne_modes']}_"
-    else :
-        test="S_"
+        test= f"{test}E{farm['Ne_modes']}_"
     if farm['Configuration']=="d/a" : 
         config_d= "a"
     else : 

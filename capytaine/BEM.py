@@ -4,16 +4,18 @@
 import numpy as np
 # from toolbox import mesh
 from utils import configuration as CIT
-from utils import output
-from utils import plot
 from utils import BEMoutput as out
+from utils import Free_surface as outFS
 import utils.files as UT
+import time
 
 # import utils.files as UT
 import capytaine as cpt
-from capytaine.post_pro import rao
+from capytaine.post_pro import compute_rao_from_results
 from capytaine.bem.airy_waves import froude_krylov_force
 from capytaine.bem.cylindrical_waves import froude_krylov_force_cyl
+from capytaine.bem.airy_waves import airy_waves_free_surface_elevation
+
 import os
 import json
 
@@ -33,11 +35,12 @@ meshfile = os.path.join(MeshFolder, nemoh_def['mesh_filename'])
 dire = os.path.join(dirwecs, nemoh_def['name'])
 fdat = os.path.join(dire, f"{nemoh_def['mesh_filename'][:-4]}.dat")
 results = os.path.join(dire, "resultsBEM")
+folderFS = os.path.join(dire, "resultsFS")
 Motion = os.path.join(dire, "Motion")
 PlotFolder = os.path.join(dire, "Plots")
 mesh_ = os.path.join(dire, "mesh")
 
-
+FS=False
 body_def = project_data['single_body_definition']
 water_depth = body_def['water_depth'] # meters
 
@@ -83,8 +86,12 @@ print("------------------ BEM resolution with Capytaine -------------")
 print("name : ", nemoh_def['name'])
 print("Nw : ", len(omega))
 print("Nbeta isolated : ", len(directions))
+print("Depth : ", water_depth)
+
 cpt.set_logging('WARNING')
 barge = cpt.load_mesh(meshfile, file_format='nemoh')
+# if nemoh_def["symmetry"]==1:
+    # barge = cpt.ReflectionSymmetricMesh(barge, cpt.xOz_Plane, name=f"{nemoh_def['mesh_filename'][:-4]}")
 solver = cpt.BEMSolver()
 if body_def['sources']==1:
     Incident_potential="cylindrical"
@@ -92,15 +99,24 @@ if body_def['sources']==1:
 else :
     Incident_potential="planar"
     S=''
-param_distance=1
-limite=1023
+param_distance=4
+limite=10
 
-diameter= 2*body_def['cylinder']['radius']
 farm = project_data['farm_definition']
+if farm['Free_surface']['Nx']>0:
+    print("---------> Free surface computing")
+    X = np.linspace(-farm['Free_surface']['Lx']/2, farm['Free_surface']['Lx']/2, farm['Free_surface']['Nx'])
+    Y = np.linspace(-farm['Free_surface']['Ly']/2, farm['Free_surface']['Ly']/2, farm['Free_surface']['Ny'])
+    grid = np.meshgrid(X, Y)
+    FS=True
+    if not os.path.exists(folderFS):
+        os.makedirs(folderFS)
 while param_distance<=limite : 
+    start_time = time.time()
     if farm['Configuration']=="logd":
         N_bodies=farm["N_bodies"]
         print("Nb : ", N_bodies)
+        diameter= 2*body_def['cylinder']['radius']
         if N_bodies>1 :
             distance = param_distance
             print(f"Distance between the two bodies center : {distance+diameter}")
@@ -123,8 +139,9 @@ while param_distance<=limite :
         else :
             distance=0
         print("Type configuration", farm["Type"])
+        results_d = os.path.join(results, S+farm["Type"]+f"_da{distance}")
         coord = CIT.CreateConfig(N_bodies, radius_a*distance, farm["Type"])
-        limite=10
+        limite=4
     else :
         layout = farm['layout']
         print("Nb : ", len(layout))
@@ -138,7 +155,8 @@ while param_distance<=limite :
             distance = np.linalg.norm(coord[1] - coord[0])
             print(f"Distance between the two bodies center : {distance}")
             # distance = distance - diameter
-            print(f"Distance between the two bodies : {distance}")
+            a=farm["body_dim"]
+            print(f"Distance between the two bodies : {distance- a*2}")
         else :
             distance=0
         results_d = os.path.join(results, S+f"Nb{N_bodies}_d{distance}")
@@ -148,13 +166,31 @@ while param_distance<=limite :
         param_distance=param_distance+1
     else :
         param_distance=param_distance*2
-    body = cpt.FloatingBody(mesh=barge,
-                        dofs=cpt.rigid_body_dofs(rotation_center=(0, 0, 0)),
-                        center_of_mass=(0, 0, 0))
+   
+    if len(body_def['DOF']) == 6:
+    # On crée directement avec rigid_body_dofs
+        body = cpt.FloatingBody(
+        mesh=barge,
+        dofs=cpt.rigid_body_dofs(rotation_center=body_def['rotation_center']),
+        center_of_mass=(0, 0, 0)
+        )
+    else:
+        # On crée un corps vide et ajoute les DOFs une à une
+        body = cpt.FloatingBody(mesh=barge, center_of_mass=(0, 0, 0))
+        for dof in body_def['DOF']:
+            if dof in ['Surge', 'Sway', 'Heave']:
+                body.add_translation_dof(name=dof)
+            elif dof in ['Roll', 'Pitch', 'Yaw']:
+                body.add_rotation_dof(name=dof)
+            else:
+                raise ValueError(f"DOF inconnue : {dof}")
+
     # locations = np.array([[0.0, 0.0], [10.0, 0.0]])
     all_bodies = body.assemble_arbitrary_array(coord)
+    # for body, pos in zip(all_bodies, coord):
+        # body.center_of_mass = pos
     vect_dof=list(all_bodies.dofs)
-    print("DOF : ", len(vect_dof))
+    print("DOF : ", len(vect_dof), vect_dof)
     UT.nemoh_structure(dire)
     M=int((len(directions)-1)/2)
     modeM=np.arange(-M, M+1)
@@ -165,7 +201,7 @@ while param_distance<=limite :
     num = 1
     for i, w in enumerate(omega):
         print("problem n°", num, "/",Np)
-
+        fse_tot=0
         for k, angle in enumerate(directions) :
         # --- DIFFRACTION ---
             pbD = cpt.DiffractionProblem(body=all_bodies, wave_direction=angle, 
@@ -181,8 +217,11 @@ while param_distance<=limite :
             for dof in resultD.forces
             }
             # excitation_force = resultD.forces  # dict par DOF
-            sources_diff = resultD.sources    
-
+            sources_diff = resultD.sources
+            if FS : 
+                fse = solver.compute_free_surface_elevation(grid, resultD)
+                outFS.SAVE_FS_TXT(fse, num, False, grid, folderFS)
+                fse_tot=fse_tot+fse
             results_data.append({
                 "type": "diffraction",
                 "omega": w,
@@ -204,7 +243,10 @@ while param_distance<=limite :
             added_mass = resultR.added_mass
             damping = resultR.radiation_damping
             sources_rad = resultR.sources
-
+            if FS : 
+                fse = solver.compute_free_surface_elevation(grid, resultR)
+                outFS.SAVE_FS_TXT(fse, num, False, grid, folderFS)
+                fse_tot=fse_tot+fse
             results_data.append({
                 "type": "radiation",
                 "omega": w,
@@ -220,13 +262,26 @@ while param_distance<=limite :
 
             num += 1
         wavenumber[i]=pbR.wavenumber
-    out.write_params_file(results_data, output_file=os.path.join(dire, "params.dat"))    
+        if FS : 
+            incoming_fse = airy_waves_free_surface_elevation(grid, resultD)
+            outFS.SAVE_FS_TXT(fse_tot + incoming_fse, i+1, True, grid, folderFS)
+    end_time = time.time()
+    out.write_params_file(results_data, water_depth, output_file=os.path.join(dire, "params.dat"))    
     if not os.path.exists(results):
         os.makedirs(results)
     if not os.path.exists(results_d):
         os.makedirs(results_d)
     print(results_d)
     out.WriteCapytaineDataFromResults(results_data, results_folder=results_d, dofs=vect_dof)
-    out.WriteSourcesByProblem(results_data, all_bodies, results_folder=results_d)
+    if farm['RAO'] :
+        print("-- RAO calculation activated")
+        inertia_matrix = body.build_inertia_matrix_from_translated_bodies(coord) 
+        hydrostatic_stiffness = body.build_hydrostatic_stiffness_from_translated_bodies(coord)
+        RAO=compute_rao_from_results(results_data, omega, directions, inertia_matrix, hydrostatic_stiffness, 
+                             dissipation=None, extra_stiffness=None, vect_dof=vect_dof)
+        out.WriteCapytaineRAO(RAO, vect_dof, results_d)
+
+    out.WriteComputeTime(results_d, end_time-start_time)
+    # out.WriteSourcesByProblem(results_data, all_bodies, results_folder=results_d)
 
 print('end of script')

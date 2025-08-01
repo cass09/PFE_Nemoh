@@ -387,9 +387,9 @@ class DiffractionProblem(LinearPotentialFlowProblem):
                         cylindrical_waves_velocity(self.body.mesh.faces_centers, self)
                         * self.body.mesh.faces_normals
                 ).sum(axis=1)
-                with open("BC.dat", 'w') as f:
-                    for val in self.boundary_condition:
-                        f.write(f"{val.real:.6e}+{val.imag:.6e}j\n")
+                # with open("BC.dat", 'w') as f:
+                #     for val in self.boundary_condition:
+                #         f.write(f"{val.real:.6e}+{val.imag:.6e}j\n")
             # Note that even with forward speed, this is computed based on the
             # frequency and not the encounter frequency.
 

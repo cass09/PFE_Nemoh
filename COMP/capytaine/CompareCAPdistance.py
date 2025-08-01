@@ -530,12 +530,12 @@ def plot_RAD_E(fileBEM, filePIT, filePIT_E, file, nom, indice, titre, distances,
 
     for k, ij in enumerate(indice):
         plt.figure(figsize=(8, 6))
-        plt.xlabel("Distance (m)")
+        plt.xlabel("d/a")
         plt.ylabel(f"{nom} {unit}")
         plt.grid(True) 
         i=ij[0]-1
         j=ij[1]-1
-        plt.xscale("log", base=2) 
+        # plt.xscale("log", base=2) 
         plt.title(titre +f", w={freq} rad/s, Coefficient {ij[0]}_{ij[1]}")
         plt.plot(distances, [mat[i][j] for mat in Coef_BEM], linestyle='--', marker='s', color='b', markersize=5, label=f"CAP BEM")
         plt.plot(distances, [mat[i][j] for mat in Coef_PIT], linestyle='--', marker='o', color='black', markersize=5, label=f"CAP IT L=0")
@@ -572,9 +572,9 @@ def plot_Fex_E(fileBEM, filePIT, filePIT_E, file, num_dof, titre, distances, Ne,
         j=dof-1
         plt.figure(figsize=(10, 8))
         plt.title(titre + f", beta={beta_BEM[i]:.2f}°, w={freq} rad/s, dof {j+1}")
-        plt.xlabel("Frequency (rad/s)")
+        plt.xlabel("d/a")
         plt.ylabel("|Fex| (N)")
-        plt.xscale("log", base=2) 
+        # plt.xscale("log", base=2) 
         plt.plot(distances, Coef_BEM[:,i, j], linestyle='--', marker='s', color='b', markersize=5, label=f"CAP BEM")   
         plt.plot(distances, Coef_PIT[:,i, j], linestyle='--', marker='o', color='black', markersize=5, label=f" CAP IT L=0")   
         for e in range(len(filePIT_E)) :
@@ -583,7 +583,7 @@ def plot_Fex_E(fileBEM, filePIT, filePIT_E, file, num_dof, titre, distances, Ne,
             plt.plot(distances, Coef_PIT_E[e][:,i, j], linestyle=':', marker=marker, color=color, markersize=4, label=f"CAP PIT L={Ne[e]}")   
         plt.legend()
         plt.grid(True)
-        plt.savefig(f"{file}_Fex_abs_w{i_w+1}_B{dof}.png", dpi=300)
+        plt.savefig(f"{file}_w{i_w+1}_B{dof}.png", dpi=300)
         plt.close()    
     return
 
@@ -764,15 +764,15 @@ def CompareResultsFex_E(fileBEM, fileBEM_phase, filePIT, filePIT_phase, param_d,
 #################################################################
 #################################################################
 
-param_d=1
-limite=600
+param_d=2
+limite=10
 COMP_E = True
 
-GRAPHS_RAD=False
+GRAPHS_RAD=True
 GRAPHS_Fex=True
 
-mesh="barge"
-config_a=False
+mesh="CylR3"
+config_a=True
 Nb=2
 layout="X"
 Nw=20
@@ -787,8 +787,8 @@ chemin="/home/cassandra/Documents/PFE_MOREnergy/Nemoh_myVersion/"
 chemin_PIT_N3 = f"{chemin}PIT3_E/wec_inputs/{PIT_N3_file}/resultsIT/"
 chemin_PIT_N3_REF = f"{chemin}PIT3_E/wec_inputs/{PIT_N3_file_REF}/resultsIT/"
 # BEM_file=f"BEM_{mesh}_BETAS"
-chemin_CAP=f"{chemin}capytaine/MyTestCases/CAP_{mesh}/resultsIT/"
-chemin_CAP_BEM=f"{chemin}capytaine/MyTestCases/C_BEM_{mesh}/resultsBEM/Nb{Nb}_{layout}"
+chemin_CAP=f"{chemin}capytaine/MyTestCases/CAP_{mesh}_h12/resultsIT/"
+chemin_CAP_BEM=f"{chemin}capytaine/MyTestCases/C_BEM_{mesh}_h12/resultsBEM/Nb{Nb}_{layout}"
 titre=f"{mesh} - Nb={Nb} - {layout}, Nw={Nw}, Nbeta=13, Ndof=6, Ndir={Ndir}"
 
 
@@ -810,7 +810,7 @@ while param_d<=limite :
         distance=f"da{param_d}"  
     else :
         distance=f"d{param_d}"  
-    BEM_file=f"{chemin_CAP_BEM}_d{param_d}/"
+    BEM_file=f"{chemin_CAP_BEM}_da{param_d}/"
     CM_BEM_d = f"{BEM_file}Capytaine_Madd.dat"
     CM_PIT_N3_d = f"{chemin_CAP}CapytaineIT_{test}Madd_{PIT_type}{beta_value}{distance}.00.dat"
     CM_PIT_N3_REF_d = f"{chemin_PIT_N3_REF}Global_Madd_{PIT_type}{beta_value}{distance}.00.dat"
@@ -839,11 +839,12 @@ while param_d<=limite :
     Fex_phase_PIT_N3.append(Fex_phase_PIT_N3_d) 
     Fex_phase_PIT_N3_REF.append(Fex_phase_PIT_N3_REF_d) 
     vect_distance.append(param_d) 
-    param_d=param_d*2
+    param_d=param_d+1
 
-indices_w=[0, 13, 19]
+indices_w=[3]
 if not COMP_E : 
     for i_w in indices_w : 
+        print("i_w : ", i_w)
         if GRAPHS_Fex :
             for ind, i in enumerate([[1], [9]]) :
                 print("dof", i)
@@ -862,8 +863,8 @@ if not COMP_E :
 #################################################################
 #################################################################
 Ne=[1, 6]
-DOF=[1, 3, 5, 7, 9, 11]
-indice=[(1, 1), (3,3), (3,9), (1,7), (5,11), (1,3), (1,9), (5,5)]
+DOF=[1, 3, 5]
+indice=[(1, 1), (3,9), (1,7), (5,11)]
 CA_IT_files=[]
 CM_IT_files=[]
 Fex_IT_files=[]
@@ -877,10 +878,10 @@ if COMP_E :
         PIT_files_Fex=[]
         PIT_files_Fex_ph=[]
         for c, distance in enumerate(vect_distance):
-            CM_PIT_E = f"{chemin_CAP}CapytaineIT_S_E{E}_Madd_{PIT_type}{beta_value}d{distance}.00.dat"
-            CA_PIT_E = f"{chemin_CAP}CapytaineIT_S_E{E}_Crad_{PIT_type}{beta_value}d{distance}.00.dat"
-            Fex_PIT_E = f"{chemin_CAP}CapytaineIT_S_E{E}_Fe_abs_{PIT_type}{beta_value}d{distance}.00.dat"
-            Fex_phase_PIT_E = f"{chemin_CAP}CapytaineIT_S_E{E}_Fe_phase_{PIT_type}{beta_value}d{distance}.00.dat"
+            CM_PIT_E = f"{chemin_CAP}CapytaineIT_S_E{E}_Madd_{PIT_type}{beta_value}da{distance}.00.dat"
+            CA_PIT_E = f"{chemin_CAP}CapytaineIT_S_E{E}_Crad_{PIT_type}{beta_value}da{distance}.00.dat"
+            Fex_PIT_E = f"{chemin_CAP}CapytaineIT_S_E{E}_Fe_abs_{PIT_type}{beta_value}da{distance}.00.dat"
+            Fex_phase_PIT_E = f"{chemin_CAP}CapytaineIT_S_E{E}_Fe_phase_{PIT_type}{beta_value}da{distance}.00.dat"
             PIT_files_CM.append(CM_PIT_E) 
             PIT_files_CA.append(CA_PIT_E) 
             PIT_files_Fex.append(Fex_PIT_E) 
@@ -890,8 +891,9 @@ if COMP_E :
         Fex_IT_files.append(PIT_files_Fex)
         Fex_ph_IT_files.append(PIT_files_Fex_ph)
 
-    indices_w=[13]
+    indices_w=[3]
     for i_w in indices_w : 
+        print("i_w : ", i_w)
         if GRAPHS_RAD : 
             print("\n indice=", indice )
             plot_RAD_E(CM_BEM, CA_PIT_N3, CA_IT_files, f"C_E_D_{test}Nb{Nb}_{layout}", "Added_Mass", indice, titre, vect_distance, Ne, i_w)

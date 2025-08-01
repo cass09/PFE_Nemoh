@@ -659,7 +659,7 @@ def CompareResultsFex_E(fileBEM, fileBEM_phase, filePIT, filePIT_phase, param_d,
 #################################################################
 #################################################################
 
-param_d=1
+param_d=2
 
 N3 = False
 COMP_E = True
@@ -680,11 +680,12 @@ elif GRAPHS_beta or COMP_E :
 else : 
     limite=param_d
     GRAPHS_N3_F = True
-    GRAPHS_N3_C = True
+    GRAPHS_N3_C = False
 
 
-mesh="barge"
-config_a=False
+mesh="CylR3"
+LID="_h12"
+config_a=True
 Nb=2
 layout="X"
 Nw=20
@@ -693,14 +694,14 @@ test="S_"
 # beta_value="beta_180.0_"
 beta_value=""
 PIT_type=f"Nb{Nb}_{layout}_"
-PIT_N3_file=f"PIT3_{mesh}_source"
-CAP_file=f"CAP_{mesh}"
-PIT_N3_file_REF=f"PIT3_{mesh}"
+PIT_N3_file=f"PIT3_{mesh}{LID}_source"
+CAP_file=f"CAP_{mesh}{LID}"
+PIT_N3_file_REF=f"PIT3_{mesh}{LID}"
 chemin="/home/cassandra/Documents/PFE_MOREnergy/Nemoh_myVersion/"
 chemin_PIT_N3 = f"{chemin}PIT3_E/wec_inputs/{PIT_N3_file}/resultsIT/"
 chemin_PIT_N3_REF = f"{chemin}PIT3_E/wec_inputs/{PIT_N3_file_REF}/resultsIT/"
 chemin_CAP=f"{chemin}capytaine/MyTestCases/{CAP_file}/resultsIT/"
-chemin_CAP_BEM=f"{chemin}capytaine/MyTestCases/C_BEM_{mesh}/resultsBEM/Nb{Nb}_{layout}"
+chemin_CAP_BEM=f"{chemin}capytaine/MyTestCases/C_BEM_{mesh}{LID}/resultsBEM/Nb{Nb}_{layout}"
 titre=f"{mesh} - Nb={Nb} - {layout}, Nw={Nw}, Nbeta=13, Ndof=6, Ndir={Ndir}"
 
 if GRAPHS_beta : 
@@ -711,7 +712,7 @@ if GRAPHS_beta :
 while param_d<=limite : 
     if config_a : 
         distance=f"da{param_d}"  
-        titre=f"{titre}, d={param_d*5}m"
+        titre=f"{titre}, d={param_d*3}m"
     else :
         distance=f"d{param_d}"  
         titre=f"{titre}, d={param_d}m"
@@ -755,11 +756,11 @@ while param_d<=limite :
                 f.write(f"{L_inf_error_ph:16.8f}      {L2_error_ph:16.8f}\n")
 
     if GRAPHS_N3_F :
-        for ind, i in enumerate([[1], [3], [5]]) :
+        for ind, i in enumerate([[1], [3], [9]]) :
             print("dof", i)
             Trace_Fex(Fex_BEM, Fex_phase_BEM, Fex_CAP, Fex_phase_CAP, Fex_PIT_N3, Fex_phase_PIT_N3, Fex_PIT_N3_REF, Fex_phase_PIT_N3_REF, f"IT_{test}Nb{Nb}_{layout}", i, False, titre, distance)
     if GRAPHS_N3_C : 
-        indices=[[(1, 1)], [(3, 3)], [(1, 7)], [(3, 9)], [(1,3)], [(5,11)]]
+        indices=[[(1,1)], [(3,3)], [(1, 7)], [(3, 9)], [(5,11)]]
         for ij in indices : 
             print("indice", ij)
             Trace_RAD(CA_BEM, CA_CAP, CA_PIT_N3, CA_PIT_N3_REF, f"IT_{test}Nb{Nb}_{layout}", "Damping", ij, titre, distance)
@@ -782,34 +783,34 @@ while param_d<=limite :
 if COMP_E :   
     if GRAPHS_E : 
         print("\n ------------ PLOT -----------------")
-        vect_d=[1]
+        vect_d=[4]
     if ERROR_E : 
         print("\n ------------ ERROR -----------------")
         vect_d=[]
         for k in range(0, 10):
             vect_d.append(2**k) 
-    Ne=[1, 6]
-    DOF=[1, 3, 5, 7, 9, 11]
-    indice=[(1, 1), (3,3), (3,9), (1,7), (5,11), (1,3), (1,9), (5,5)]
+    Ne=[1,6]
+    DOF=[1, 3, 5]
+    indice=[(1, 1), (3,9), (1,7), (5,11)]
     print("\n Ne=", Ne)
     print("\n DOF=", DOF )
     print("\n indice=", indice )
-    chemin_PIT_N3=f"{chemin}capytaine/MyTestCases/CAP_{mesh}/resultsIT/"
-    chemin_CAP_BEM = f"{chemin}capytaine/MyTestCases/C_BEM_{mesh}/resultsBEM/Nb{Nb}_{layout}"
+    chemin_PIT_N3=f"{chemin}capytaine/MyTestCases/CAP_{mesh}_h12/resultsIT/"
+    chemin_CAP_BEM = f"{chemin}capytaine/MyTestCases/C_BEM_{mesh}_h12/resultsBEM/Nb{Nb}_{layout}"
 
     for c, distance in enumerate(vect_d):
         print("\n  Distance=", distance)
-        titre=f"{mesh} - Nb={Nb} {layout}, Nw=20, Nbeta=13, Ndof=6, Ndir=1, d={distance}m"
+        titre=f"{mesh} - Nb={Nb} {layout}, Nw=20, Nbeta=13, Ndof=6, Ndir=1, d={distance*3}m"
 
-        CM_BEM = f"{chemin_CAP_BEM}_d{distance}/Capytaine_Madd.dat"
-        CM_PIT_N3_REF = f"{chemin_PIT_N3}CapytaineIT_S_Madd_{PIT_type}{beta_value}d{distance}.00.dat"
-        CA_BEM = f"{chemin_CAP_BEM}_d{distance}/Capytaine_Crad.dat"
-        CA_PIT_N3_REF = f"{chemin_PIT_N3}CapytaineIT_S_Crad_{PIT_type}{beta_value}d{distance}.00.dat"
+        CM_BEM = f"{chemin_CAP_BEM}_da{distance}/Capytaine_Madd.dat"
+        CM_PIT_N3_REF = f"{chemin_PIT_N3}CapytaineIT_S_Madd_{PIT_type}{beta_value}da{distance}.00.dat"
+        CA_BEM = f"{chemin_CAP_BEM}_da{distance}/Capytaine_Crad.dat"
+        CA_PIT_N3_REF = f"{chemin_PIT_N3}CapytaineIT_S_Crad_{PIT_type}{beta_value}da{distance}.00.dat"
 
-        Fex_BEM = f"{chemin_CAP_BEM}_d{distance}/Capytaine_Fe_abs.dat"  
-        Fex_phase_BEM = f"{chemin_CAP_BEM}_d{distance}/Capytaine_Fe_phase.dat"  
-        Fex_PIT_N3_REF = f"{chemin_PIT_N3}CapytaineIT_S_Fe_abs_{PIT_type}{beta_value}d{distance}.00.dat"
-        Fex_phase_PIT_N3_REF = f"{chemin_PIT_N3}CapytaineIT_S_Fe_phase_{PIT_type}{beta_value}d{distance}.00.dat"
+        Fex_BEM = f"{chemin_CAP_BEM}_da{distance}/Capytaine_Fe_abs.dat"  
+        Fex_phase_BEM = f"{chemin_CAP_BEM}_da{distance}/Capytaine_Fe_phase.dat"  
+        Fex_PIT_N3_REF = f"{chemin_PIT_N3}CapytaineIT_S_Fe_abs_{PIT_type}{beta_value}da{distance}.00.dat"
+        Fex_phase_PIT_N3_REF = f"{chemin_PIT_N3}CapytaineIT_S_Fe_phase_{PIT_type}{beta_value}da{distance}.00.dat"
 
         PIT_files_CM=[]
         PIT_files_CA=[]
@@ -817,10 +818,10 @@ if COMP_E :
         PIT_files_Fex_ph=[]
             
         for i, E in enumerate(Ne) : 
-            CM_PIT_N3 = f"{chemin_PIT_N3}CapytaineIT_S_E{E}_Madd_{PIT_type}{beta_value}d{distance}.00.dat"
-            CA_PIT_N3 = f"{chemin_PIT_N3}CapytaineIT_S_E{E}_Crad_{PIT_type}{beta_value}d{distance}.00.dat"
-            Fex_PIT_N3 = f"{chemin_PIT_N3}CapytaineIT_S_E{E}_Fe_abs_{PIT_type}{beta_value}d{distance}.00.dat"
-            Fex_phase_PIT_N3 = f"{chemin_PIT_N3}CapytaineIT_S_E{E}_Fe_phase_{PIT_type}{beta_value}d{distance}.00.dat"
+            CM_PIT_N3 = f"{chemin_PIT_N3}CapytaineIT_S_E{E}_Madd_{PIT_type}{beta_value}da{distance}.00.dat"
+            CA_PIT_N3 = f"{chemin_PIT_N3}CapytaineIT_S_E{E}_Crad_{PIT_type}{beta_value}da{distance}.00.dat"
+            Fex_PIT_N3 = f"{chemin_PIT_N3}CapytaineIT_S_E{E}_Fe_abs_{PIT_type}{beta_value}da{distance}.00.dat"
+            Fex_phase_PIT_N3 = f"{chemin_PIT_N3}CapytaineIT_S_E{E}_Fe_phase_{PIT_type}{beta_value}da{distance}.00.dat"
             if ERROR_E : 
                 CompareResultsRAD_E(CM_BEM, CM_PIT_N3, "CM", distance, f"Nb{Nb}_{layout}", Nb, E, 0.02, 0) # tol sur erreur, precision sur valeur
                 CompareResultsRAD_E(CA_BEM, CA_PIT_N3, "CA", distance, f"Nb{Nb}_{layout}", Nb, E, 0.02, 0)

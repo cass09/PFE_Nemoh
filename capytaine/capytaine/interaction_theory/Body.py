@@ -7,6 +7,7 @@ import numpy as np
 import os
 from pickle import Pickler, Unpickler
 from capytaine.interaction_theory.transfers_sources import transfers_sources
+from capytaine.interaction_theory.transfers import transfers
 import cmath
 
 # Settings
@@ -15,7 +16,7 @@ TolCheck = 1e-3
 
 class Body(object):
 
-    def __init__(self, freqs, directions, depth, Nmodes_E, wavenumber, Fex) :
+    def __init__(self, freqs, directions, depth, Nmodes_E, wavenumber, Fex, MethodSource) :
         """
         """
         self.period = 2*pi/freqs
@@ -24,12 +25,18 @@ class Body(object):
         self.Nmodes_E=Nmodes_E
         self.wnumber = wavenumber
         self.Fex=Fex
+        self.method=MethodSource
 
-    def Transfers(self, SourcesS, SourcesR, centers, areas, Tol=1e-6):
-        (self.D, self.G, self.AR, self.AS, self.order, self.truncorder) = transfers_sources(self.depth, self.dir, 
-                self.period, self.wnumber, (centers, areas), SourcesS, SourcesR, self.Fex, Tol, self.Nmodes_E)
+    def Transfers(self, ParamS, ParamR, mesh, Tol=1e-6):
+        if self.method:
+            (self.D, self.G, self.AR, self.AS, self.order, self.truncorder) = transfers_sources(self.depth, self.dir, 
+                self.period, self.wnumber, mesh, ParamS, ParamR, self.Fex, Tol, self.Nmodes_E)
+        else : 
+            (self.D, self.G, self.AR, self.AS, self.order, self.truncorder) = transfers(self.depth, self.dir, 
+                self.period, self.wnumber, mesh, ParamS, ParamR, self.Fex, Tol, self.Nmodes_E)
+       
 
-    def Write(self, directory, L) : 
+    def Write(self, directory, L, method) : 
 
         D=self.D
         G=self.G
@@ -40,9 +47,10 @@ class Body(object):
             E=f"E{self.Nmodes_E}_"
         else : 
             E=""
-       
-        S="S_"
-      
+        if method==1:
+            S="S_"
+        else:
+            S=""
         D_file_path_abs = os.path.join(directory,  f"{S}OneBodyProblem_{E}DiffractionMatrix_abs.dat")
         D_file_path_ph = os.path.join(directory,  f"{S}OneBodyProblem_{E}DiffractionMatrix_ph.dat")
         D_file_path_Re = os.path.join(directory,  f"{S}OneBodyProblem_{E}DiffractionMatrix_Re.dat")
