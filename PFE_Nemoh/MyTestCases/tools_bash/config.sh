@@ -51,7 +51,7 @@ if [[ $BEM_Nb -ge 3 ]]; then
 fi
 if [[ $BEM_Nb -ge 4 ]]; then 
     if [[ "$config_type" == "C" ]]; then 
-        x_t1=$(echo "-(2 * $Rcyl + $distance)/2" | bc -l)
+        x_t1=$(echo "-($distance)/2" | bc -l)
         y_t1=$x_t1
         x_t2=$x_t1
         y_t2=$(echo "-1*$x_t2"  | bc -l)
@@ -64,6 +64,31 @@ if [[ $BEM_Nb -ge 4 ]]; then
     fi 
     
 fi 
+if [[ $BEM_Nb -ge 9 ]]; then 
+    if [[ "$config_type" == "C" ]]; then 
+        x_t1=0
+        y_t1=0
+        x_t2=$(echo "($Rcyl + $Ra)" | bc -l)
+        y_t2=0
+        x_t3=$x_t2
+        y_t3=$(echo "-1*$x_t2"  | bc -l)
+        x_t4=0
+        y_t4=$y_t3
+        x_t5=$y_t3
+        y_t5=$y_t3
+        x_t6=$y_t3
+        y_t6=0
+        x_t7=$y_t3
+        y_t7=$x_t2
+        x_t8=0
+        y_t8=$x_t2
+        x_t9=$x_t2
+        y_t9=$x_t2
+        lenghtX=0
+        lenghtY=0
+    fi 
+    
+fi 
 if [[ $FS -eq 0 ]]; then 
     lenghtX=0
     lenghtY=0
@@ -72,7 +97,15 @@ translate1=($x_t1 $y_t1 0.0)
 translate2=($x_t2 $y_t2 0.0)
 translate3=($x_t3 $y_t3 0.0)
 translate4=($x_t4 $y_t4 0.0)
-
+translate5=($x_t5 $y_t5 0.0)
+translate6=($x_t6 $y_t6 0.0)
+translate7=($x_t7 $y_t7 0.0)
+translate8=($x_t8 $y_t8 0.0)
+translate9=($x_t9 $y_t9 0.0)
+for i in {1..9}; do
+    eval "current_translate=(\"\${translate$i[@]}\")"
+    echo "translate$i=${current_translate[@]}"
+done
 # echo "scale FS" $lenghtX $lenghtY
 for ((i=1; i<=BEM_Nb; i++)); do
     eval mesh_file$i=\$mesh_file1

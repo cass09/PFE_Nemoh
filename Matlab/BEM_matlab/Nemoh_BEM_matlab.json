@@ -1,0 +1,54 @@
+{   
+    "project": {
+        "name": "BEM_test",
+        "folder": "myProjets/",
+        "run_BEM": false
+    },
+    "mesh":{
+        "filename": "PontoonWingsSYMtest",
+        "create": true,
+        "comment": "Pontoon : Lx, Ly, Lz ; Wings : Length, Height",
+        "Pontoon" : [25, 200, 7],
+        "Wings": [2.5,0.5],
+        "deltaX" : 3
+    },
+    "params": {
+        "comment": "Surge, Sway, Heave, Roll, Pitch, Yaw",
+        "DOF": [1, 1, 1, 1, 1, 1],
+        "rotation_center":[0, 0, -2],
+        "frequency": {
+            "_comment": "(format 1 [rad/s], 2 [Hz=1/s], 3 [s])",
+            "min": 3,
+            "max": 23,
+            "number": 2,
+            "format": 3
+        },
+        "direction": {
+            "_comment": "(format DEG)",
+            "min": 0.0,
+            "max": 360.0,
+            "number": 1
+        },
+        "water_depth": 250,
+        "comment_RAO": "RAO calculation running only with 6 DOF",
+        "RAO" : 1,
+        "Free_surface": {
+            "Nx": 0,
+            "Ny": 111,
+            "Lx": 400,
+            "Ly": 220
+        },
+        "cylinder": {
+            "_comment": "Radius should be at least 1 panel larger than the body mesh.",
+            "radius": 0
+        },
+        "sources" : 0
+    },
+    "farm": {
+        "N_bodies" : 1,
+        "layout": [
+            {"name":"body1", "position": [0,0]}
+        ]
+        
+    }
+}

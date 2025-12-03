@@ -1,8 +1,8 @@
 {   
     "nemoh_project": {
-        "name": "CAP_BargeX6_h12",
+        "name": "CAP_CylR3_source_test",
         "folder": "/home/cassandra/Documents/PFE_MOREnergy/Nemoh_myVersion/capytaine/MyTestCases",
-        "mesh_filename": "BargeX6Y6H6SYMm6.dat",
+        "mesh_filename": "CylR3H6.dat",
         "mesh_type": "NEMOH",
         "run_bem": true
     },
@@ -12,24 +12,24 @@
         "rotation_center":[0, 0, 0],
         "spectral_param": {
             "_comment": "(format w [rad/s], f [Hz=1/s], T [s], k [1/m] or L [m])",
-            "min": 0.05,
-            "max": 0.5,
-            "number": 20,
-            "format": "f"
+            "min": 1.5,
+            "max": 2.5,
+            "number": 2,
+            "format": "w"
         },
         "direction": {
             "_comment": "M for truncation mode OR Nbeta for number of wave direction (Nbeta=2*M+1)",
-            "number": 11,
+            "number": 9,
             "format": "Nbeta"
         },
         "water_depth": 12,
         "cylinder": {
             "_comment": "Radius should be at least 1 panel larger than the body mesh.",
-            "radius": 4.48,
-            "azimuthal_discretization": 32,
+            "radius": 3.25,
+            "azimuthal_discretization": 25,
             "depth_discretization": 15
         },
-        "sources" : 0
+        "sources" : 1
     },
     "farm_definition": {
         "Configuration" : "d/a",
@@ -38,7 +38,7 @@
         "body_dim" : 3,
         "layout": [
             {"name":"body1", "position": [0,0]},
-            {"name":"body2", "position": [20,0]}
+            {"name":"body2", "position": [12,0]}
         ], 
         "wave_directions": {
             "_comment": "Incoming wave directions (format DEG or RAD)",
@@ -48,8 +48,8 @@
             "format": "DEG"
         },
         "comment_RAO": "RAO calculation running only with 6 DOF",
-        "RAO" : true,
-        "Ne_modes" : 0, 
+        "RAO" : false,
+        "Ne_modes" : 1, 
         "Kochin": {
             "_comment": "(format DEG or RAD)",
             "min": 0.0,
@@ -59,9 +59,9 @@
         },
         "Free_surface": {
             "Nx": 0,
-            "Ny": 10,
-            "Lx": 50,
-            "Ly": 10
+            "Ny": 60,
+            "Lx": 60,
+            "Ly": 60
         },
         "_comment": "Output Type (format DAT or H5F)",
         "Output_type" : "DAT",

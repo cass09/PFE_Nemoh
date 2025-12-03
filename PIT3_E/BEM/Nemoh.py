@@ -267,7 +267,7 @@ def RunHydro(directory, nemohdynamics = 'C:\\nemoh') :
     os.chdir(directory)
 
     # CML : extension .exe pour Windows
-    
+    execute(_j(nemohdynamics,'preProc'))
     execute(_j(nemohdynamics,'hydrosCal'))
     # execute(_j(nemohdynamics,'postProc'))
 
@@ -408,7 +408,6 @@ def ReadFieldPoints(directory, DOF, freq, Nd, FieldPoints, convention = 'N') :
     # get FieldPoints
     z = FieldPoints[0,:,2]
     th = np.linspace(0, 2*pi, Nth, endpoint = False)
-    print("th", Nth, th)
     del(burn)
     # PhiR_W = 1j*freq*conj(Phirad_N)
     for ind, fr in enumerate(freq):

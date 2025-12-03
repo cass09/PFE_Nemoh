@@ -27,7 +27,6 @@ def transfers_sources(water_depth,
               fex,
               tol,
               convention,
-              Evanescent,
               Nmodes_E):
     """ Computes cylindrical amplitude coefficients from the sources terms
       values on the isolated body.
@@ -79,45 +78,22 @@ def transfers_sources(water_depth,
         wave_cond = (water_depth, 2.*np.pi/per, k0)
         int_scat = integral_sources(wave_cond, BodyMesh, source_scat[ind], targ_order)
         int_rad = integral_sources(wave_cond, BodyMesh, source_rad[ind], targ_order)
-        # print("source_rad[ind]", source_rad[ind])
-        # print("int_rad", int_rad)
         a_s_rad_w=1j/2*C0*np.cosh(k0*water_depth)*int_rad
-        # print("a_s_rad_w", a_s_rad_w)
         diffmat_w = 1j/2*C0*np.cosh(k0*water_depth)*int_scat
-        # frcmat[ind] = np.linalg.lstsq(a_i_plane, fex[ind], rcond=None)[0]
-        # frcmat[ind]=fex[ind]
-        # act_order[ind, 0], decimals[ind, 0] = max_trunc_order(a_s_scat[ind], targ_order, tol)
         act_order[ind, 0] = targ_order
-        act_order[ind, 1], decimals[ind, 1] = max_trunc_order(a_s_rad[ind], targ_order, tol)
+        act_order[ind, 1] = targ_order
+        # radiation problem ->> cut to short !! info lost
+        # act_order[ind, 1], decimals[ind, 1] = max_trunc_order(a_s_rad[ind], targ_order, tol)
         for m in range(-targ_order, targ_order+1):
             frcmat[ind][m+targ_order,:]=-1j*fex[ind][m+targ_order,:]*g/(2*np.pi/per)
                 #     # a_s_rad[ind][:, m+targ_order]=(-1)**(-m)*(2.*np.pi/per)**2/g*np.conj(a_s_rad_w[:,-m+targ_order])
             a_s_rad[ind][:, m+targ_order]=(2*np.pi/per)**2/g*(a_s_rad_w[:,m+targ_order])
         diffmat[ind]=diffmat_w
         # a_s_rad[ind]=-a_s_rad_w
-    # print(diffmat.shape, a_i_plane_E.shape, coef_scat.shape)
-    # print(frcmat.shape, coef_rad.shape)
-    # print("G", frcmat[0], "aR", coef_rad[0])
-    # with open("D.dat", 'w') as f:
-    #     for row in diffmat[0]:
-    #         line = "\t".join(f"{val.real:.6e}+{val.imag:.6e}j" for val in row)
-    #         f.write(line + "\n")
-    # with open("G.dat", 'w') as f:
-    #     for row in frcmat[0]:
-    #         line = "\t".join(f"{val.real:.6e}+{val.imag:.6e}j" for val in row)
-    #         f.write(line + "\n")
-    # with open("aR.dat", 'w') as f:
-    #     for row in coef_rad[0]:
-    #         line = "\t".join(f"{val.real:.6e}+{val.imag:.6e}j" for val in row)
-    #         f.write(line + "\n")
-
-
     # act_order[:]=targ_order
     # Shrink G, D and AR according to the truncation order Nm
     ini = targ_order-act_order.max()
     fin = ini+2*act_order.max()+1
-    # print(diffmat.shape, ini, fin)
-    # print(act_order.shape, act_order)
     return (diffmat[:, ini:fin, ini:fin],
                 frcmat[:, ini:fin, :],
                 a_s_rad[:, :, ini:fin],

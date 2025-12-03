@@ -48,7 +48,7 @@ class MultiBody(object):
         self.Body.wnumber_E = self.Body.wnumber_E[cond]
         self.Body.truncorder = self.Body.truncorder[cond]
 
-    def Scattering(self, coord, Evanescent):
+    def Scattering(self, coord):
         """
         """
         Nb = len2(coord)
@@ -57,16 +57,16 @@ class MultiBody(object):
         k0 = self.wnumber
         kl = self.wnumber_E
         direction = self.dir
-        #
-        T = self.Transformation(coord, Nm, Evanescent)
-        T, D_array, G_array, M_int = self.Interaction(T, Nm, 'S', Evanescent)
+        Ne=len2(kl[0])
+        T = self.Transformation(coord, Nm)
+        T, D_array, G_array, M_int = self.Interaction(T, Nm, 'S')
         # Get the ambient planar wave, AP, for the scattering problem for the entire array
         matk0,matdir,X,mode = np.meshgrid(k0, direction, coord[:,0], range(-Nm,Nm+1),indexing='ij')
         Y = np.meshgrid(k0, direction, coord[:,1], range(-Nm,Nm+1), indexing='ij')[2]
         # Calculate AP using (k0,dir,bodycoord,mode)
         if self.Body.convention == 'N' :
-            if Evanescent :
-                Ntot=(2*Nm+1)*(len2(kl[0])+1)
+            if Ne>0 :
+                Ntot=(2*Nm+1)*(Ne+1)
                 AP = np.zeros((len2(k0),len2(direction),len2(coord), Ntot), dtype=complex)
                 for w in range(len2(k0)) : 
                     for beta in range(len2(direction)):
@@ -74,7 +74,7 @@ class MultiBody(object):
                             for m in range(dim):
                                 AP[w, beta, body, m] = np.exp(1j*mode[w, beta, body, m]*(pi/2-matdir[w, beta, body, m]))
                                 AP[w, beta, body, m] *= np.exp(1j*matk0[w, beta, body, m]*(X[w, beta, body, m]*np.cos(matdir[w, beta, body, m])+Y[w, beta, body, m]*np.sin(matdir[w, beta, body, m])))
-                                for l in range(len2(kl[0])):
+                                for l in range(Ne):
                                     # AP[w, beta, body, (2*Nm+1)*(l+1)+m] = np.exp(1j*mode[w, beta, body, m]*(pi/2-matdir[w, beta, body, m]))
                                     # AP[w, beta, body, (2*Nm+1)*(l+1)+m] *= np.exp(1j*kl[w][l]*(X[w, beta, body, m]*np.cos(matdir[w, beta, body, m])+Y[w, beta, body, m]*np.sin(matdir[w, beta, body, m])))
                                     AP[w, beta, body, (2*Nm+1)*(l+1)+m] = 0
@@ -84,20 +84,13 @@ class MultiBody(object):
         else :
             AP = np.exp(-1j*mode*(pi/2+matdir))
             AP *= np.exp(-1j*matk0*(X*np.cos(matdir)+Y*np.sin(matdir)))
-        if Evanescent : 
-            AP = np.reshape(AP,(len2(k0),len2(direction),(2*Nm+1)*Nb*(len2(kl[0])+1)))
-        else :     
-            AP = np.reshape(AP,(len2(k0),len2(direction),(2*Nm+1)*Nb))
+        AP = np.reshape(AP,(len2(k0),len2(direction),(2*Nm+1)*Nb*(Ne+1)))
         Fex = np.zeros((len2(k0),len2(direction),len2(G_array[0][0])), dtype=complex)
         # Save amplitude coefficients
         if self.cylamplitude:
             self.aS = []
             self.AP = []
         for i in range(len2(k0)):
-            if Evanescent : 
-                Ne=len2(kl[0])
-            else :
-                Ne=0
             Nmi = (len2(T[i])//(Nb*(Ne+1))-1)//2
             dimi = 2*Nmi+1
             col = (np.array([range(dimi*(Ne+1))]*Nb).T+np.array(range(0,dim*Nb*(Ne+1),dim*(Ne+1)))).T.reshape(-1)+(Nm-Nmi)*(Ne+1)
@@ -108,10 +101,9 @@ class MultiBody(object):
                 self.AP.append(AP[i][:,col])
             # Calculation of the excitation force for the entire array
             Fex[i,:,:] = np.dot(AP[i][:,col]+np.dot(aS,T[i]),G_array[i]) # Fex= G*aI with aI=AP+T*aS so the overall incident wave for the scattering problem
-        self.Fex= Fex
+        self.Fex= Fex        
         
-        
-    def Radiation(self, coord, Evanescent):
+    def Radiation(self, coord):
         """
         """
         Nb = len2(coord)
@@ -123,10 +115,9 @@ class MultiBody(object):
         k0 = self.wnumber
         kl = self.wnumber_E
         freq = 2*pi/self.period
-        #
-        T = self.Transformation(coord, Nm, Evanescent)
-        T, D_array, G_array, M_int = self.Interaction(T, Nm, 'R', Evanescent)
-        # From now on we work for each wave-frequency
+        Ne=len2(kl[0])
+        T = self.Transformation(coord, Nm)
+        T, D_array, G_array, M_int = self.Interaction(T, Nm, 'R')
         Madd = np.zeros((len2(k0), Nb*dof, Nb*dof))
         Crad = np.zeros((len2(k0), Nb*dof, Nb*dof))
         # For later usage D, G, T and M_inter are transposed
@@ -135,26 +126,13 @@ class MultiBody(object):
             self.aR= []
             self.AR= []
         for k in range(len2(k0)):
-            if Evanescent : 
-                Ne=len2(kl[0])
-            else :
-                Ne=0
             Nmk = (len2(T[k])//(Nb*(Ne+1))-1)//2
             dimk = 2*Nmk+1
             colT = np.array(np.arange(0,dimk*(Ne+1)*Nb,dimk*(Ne+1)).tolist()*dimk*(Ne+1),dtype=int)+np.linspace(0,dimk*(Ne+1),dimk*(Ne+1)*Nb,endpoint=False,dtype=int)
             colAR = (np.array([range(dimk*(Ne+1))])+(Nm-Nmk)*(Ne+1)).reshape(-1)
-            # print("T[k].shape:", T[k].shape)
-            # print("colT.shape:", colT.shape)
-            # print("colT[:10]:", colT[:10])
-            # print("colAR[:10]:", colAR[:10])
             T_re = np.reshape(T[k][colT],(dimk*(Ne+1),dimk*(Ne+1)*Nb**2)) # remember that T is already transposed so we are already getting T columns
-            # print("T_re.shape:", T_re.shape)
-            # print("T", T[k])
-            # print("T_re", T_re)
             AR = np.dot(AR_iso[k][:,colAR],T_re) # each row of aR is constant dof.
-            # print("shape", AR.shape, AR_iso[k].shape)
             AR = np.reshape(AR,(dof,Nb,Nb*dimk*(Ne+1)))
-            # print("AR.shape", AR.shape)
             Fex_rad = np.zeros((dof,Nb,dof*Nb),dtype=complex)
             # Save amplitude coefficients
             if self.cylamplitude:
@@ -162,7 +140,6 @@ class MultiBody(object):
                     aRaux = np.zeros(AR.shape,dtype=complex)
             for i in range(dof):
                 aR = np.dot(np.dot(AR[i,:,:],D_array[k]),M_int[k])
-                # print("aR.shape", aR.shape)
                 # Save amplitude coefficients
                 if self.cylamplitude:
                     aRaux[i] = aR
@@ -170,6 +147,7 @@ class MultiBody(object):
             # Save amplitude coefficients
             if self.cylamplitude:
                 self.aR.append(aRaux)
+          
             Madd_t = Madd_iso[k,:,:].T.repeat(Nb,axis=0).reshape((dof,1,dof*Nb))
             Crad_t = Crad_iso[k,:,:].T.repeat(Nb,axis=0).reshape((dof,1,dof*Nb))
             Ones = np.eye(Nb,dtype=int).repeat(dof,axis=1) # will be used to distribute Crad_t over eye() type
@@ -187,17 +165,15 @@ class MultiBody(object):
         self.Madd= Madd
         self.Crad= Crad
 
-    def Interaction(self, T, Nm, problem, Evanescent):
+    def Interaction(self, T, Nm, problem):
         """
         """
         dof = self.Body.dof
         dim = 2*Nm+1
         kl=self.wnumber_E
         k0 = self.wnumber
-        if Evanescent : 
-            Nb = T.shape[1]//(dim*(len(kl[0])+1))
-        else :
-            Nb = T.shape[1]//dim
+        Ne=len2(kl[0])
+        Nb = T.shape[1]//(dim*(Ne+1))
         D = self.Body.D
         G = self.Body.G
         if problem == 'R' : # radiation
@@ -205,10 +181,7 @@ class MultiBody(object):
         else : # scattering
             TruncOrder = self.Body.truncorder[:,0]
         # Interaction
-        if Evanescent : 
-            dim_e=dim*(len(kl[0])+1) # evanescent waves
-        else : 
-            dim_e=dim # progressive waves
+        dim_e=dim*(Ne+1) 
         D_array = np.zeros((len2(k0),Nb*dim_e,Nb*dim_e),dtype=complex)
         G_array = np.zeros((len2(k0),Nb*dim_e,Nb*dof),dtype=complex) # G is already transposed, numb columns= Nb*dof ok!
         for i in range(Nb):
@@ -226,21 +199,23 @@ class MultiBody(object):
             D_trunc.append(D_array[i,row+ii,col+ii])
             G_trunc.append(G_array[i,rowcol+ii,:])
             T_trunc.append(T[i,row,col])
-            if Evanescent : 
+            if Ne>0 : 
                 M_inter.append(solve(np.eye(Nb*dim_e)-np.dot(T[i],D_array[i]),np.eye(Nb*dim_e)))
             else : 
                 M_inter.append(solve(np.eye(Nb*dimp[i])-np.dot(T_trunc[i],D_trunc[i]),np.eye(Nb*dimp[i])))
         
-        if Evanescent:
+        if Ne>0:
             return T, D_array, G_array, M_inter     # sans réduction
         else : 
             return T_trunc, D_trunc, G_trunc, M_inter # réduction 
 
-    def Transformation(self, coord, Nm, Evanescent) :
+    def Transformation(self, coord, Nm) :
         """
         """
         ##
         (k0, Nb, Nf, dim) = (self.wnumber, len2(coord), len2(self.wnumber), 2*Nm+1)  
+        kl=self.wnumber_E
+        Ne=len2(kl[0])
         # Geometric properties
         (row, col) = np.meshgrid(range(Nb), range(Nb), indexing = 'ij')
         Dx = (coord[:,0]*np.ones((Nb,Nb))).T-coord[:,0]*np.ones((Nb,Nb))
@@ -249,26 +224,20 @@ class MultiBody(object):
         alf = np.arctan2(Dy,Dx)[row<col]
         ij_i = row[row<col]
         ij_j = col[row<col]
-        ##
         (D, kk0, nu) = np.meshgrid(L, k0, range(dim), indexing='ij')
         H = jv(nu, kk0*D)-1j*yv(nu, kk0*D)
         if self.Body.convention == 'N' :
             H = np.conj(H)
         del(D, kk0, nu)
-        # print(H.shape)
 
-        if Evanescent : 
-            kl=self.wnumber_E
-            Ne=len2(kl[0])
-            dim_e=dim*(Ne+1) # evanescent waves
-        
+        dim_e=dim*(Ne+1) 
+        if Ne>0 : 
             # METHOD 1 
             Ke=np.zeros((Ne, len2(L), Nf, dim)) 
             for E in range(Ne) : 
                 (D, kkl, nu) = np.meshgrid(L, kl[:,E], range(dim), indexing='ij') 
                 Ke[E]=kv(nu, kkl*D)
                 del(D, kkl, nu)
-                # print(Ke.shape)
 
              # METHOD 2
             # D = L[:, None, None]             # shape (Nd, 1, 1)
@@ -292,9 +261,7 @@ class MultiBody(object):
             # mask = (le1 == le2)
             # # sign_e = (np.tri(dim*Ne).T-np.tri(dim*Ne))**(qe-pe)
             # sign_e = np.where(qe >= pe, 1.0, -1.0)
-        else : 
-            dim_e=dim # progressive waves
-
+        
         # Transformation matrix
         (p, q) = np.meshgrid(range(-Nm, Nm+1), range(-Nm, Nm+1), indexing = 'ij')
         mapk0 = np.repeat(range(Nf), dim*dim).reshape((Nf, dim, dim))
@@ -305,11 +272,9 @@ class MultiBody(object):
             r = dim_e*ij_i[i]
             c = dim_e*ij_j[i]
             Tij= sign*H[i][mapk0, abs(q-p)]*np.exp((q-p)*alf[i]*1j)
-            # print(Tij.shape)
             T[:, r:r+dim, c:c+dim]= Tij # Tij
             T[:, c:c+dim, r:r+dim]= Tij*np.exp((q-p)*pi*1j) # Tji
-            # print("r:r+dim, c:c+dim", r,r + dim, c, c + dim)
-            if Evanescent : 
+            if Ne>0 : 
                 # METHOD 1
                 for E in range(Ne) :
                     r_e=dim_e*ij_i[i]+(E+1)*dim
@@ -317,16 +282,6 @@ class MultiBody(object):
                     Tij_e = sign * Ke[E][i][mapk0,  abs(q-p)]  * np.exp((q - p)*alf[i]*1j) * (-1.0)**p
                     T[:, r_e:r_e + dim, c_e:c_e + dim] = Tij_e
                     T[:, c_e:c_e + dim, r_e:r_e + dim] = Tij_e * np.exp((q - p)*np.pi*1j)  
-                    # print("Tij_e", Tij_e.shape)
-                    # print("ij", ij_i[i], ij_j[i])
-                    # print("E=", E)
-                    # print("r_e:r_e + dim, c_e:c_e + dim", r_e,r_e + dim, c_e, c_e + dim)
-                
-                    # print("Tij_e", Tij_e.shape, Tij_e[-1, :, :])
-                    # print("formule", kv(0, kl[-1,E]*L[i])*(-1))
-                    # print("formule", kv(1, kl[-1,E]*L[i])*(-1) * np.exp(alf[i]*1j))
-                    # print("formule", kv(4, kl[-1,E]*L[i])*(-1) * np.exp(4*alf[i]*1j))
-
                 # METHOD 2
                 # r_e = dim_e * ij_i[i] + dim
                 # c_e = dim_e * ij_j[i] + dim
@@ -343,22 +298,12 @@ class MultiBody(object):
                     # # * np.exp((qe[mask] - pe[mask]) * alf[i] * 1j) * (-1.0) ** pe[mask])
                     # T[w, r_e:r_e + dim*Ne, c_e:c_e + dim*Ne] = Tij_e
                     # T[w, c_e:c_e + dim*Ne, r_e:r_e + dim*Ne] = Tij_e * np.exp((qe - pe).reshape(dim*Ne, dim*Ne)*np.pi*1j)  
-
-                
-                
+      
         #Transpose for later usage since we finally  decided
         #to work with transposed(T). D and G for the isolated device
         #have been already obtained transposed as well as
         #AP, aS, AR and aR
         T = np.transpose(T,(0,2,1))
-        # print(T.shape)
-        # print(T[0])
-        # Écriture dans le fichier
-        # with open("T.dat", 'w') as f:
-        #     f.write("# Matrice complexe (ligne par ligne)\n")
-        #     for row in T[0]:
-        #         line = "\t".join(f"{val.real:.6f}+{val.imag:.6f}j" for val in row)
-        #         f.write(line + "\n")
         return T
     
     def RAO(self, directory) : 
@@ -458,6 +403,8 @@ class MultiBody(object):
         # print("aR iso", AR_iso.shape)
         aS=self.aS
         AS_iso = self.Body.AS
+        # print("AS_iso=", AS_iso)
+        # print("aS=", aS)
         k0=self.wnumber
         kl=self.wnumber_E
         depth=self.depth

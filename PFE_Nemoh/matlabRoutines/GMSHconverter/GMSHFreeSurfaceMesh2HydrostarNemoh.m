@@ -5,9 +5,9 @@
 clear all;clc;
 OutputFile=1;%1 for Nemoh, 2 for Hydrostar
 IncludeBdyLine=1;    %1 included, 0 not.. Only for NEMOH
-Meshfile='OC5CONFIG_MAIN_FREESURFACE_R50'; % input file name without ext
-MeshfileOutname='OC5CONFIG_MAIN_FREESURFACE_R50'; % output file name without ext
-dir='C:\Users\rkurnia\Documents\Test-VirtualBox\gmsh-4.8.4-Linux64\bin\OC5_CONFIG_MAIN\FS_mesh\';
+Meshfile='CylinderR3'; % input file name without ext
+MeshfileOutname='CylinderR3'; % output file name without ext
+dir='/home/cassandra/Documents/PFE_MOREnergy/Nemoh_myVersion/GMSH/';
 
 % Meshfile='OC5CONFIG1_FREESURFACE_R550'; % input file name without ext
 % MeshfileOutname='OC5CONFIG1_FREESURFACE_R550'; % output file name without ext

@@ -89,7 +89,8 @@ def transfers_sources(water_depth,
             diffmat_w[:,dim:]=-1/np.pi*int_scat_E
         # frcmat[ind]=fex[ind]
         act_order[ind, 0] = targ_order
-        act_order[ind, 1], decimals[ind, 1] = max_trunc_order(a_s_rad[ind], targ_order, tol)
+        act_order[ind, 1] = targ_order
+        # act_order[ind, 1], decimals[ind, 1] = max_trunc_order(a_s_rad[ind], targ_order, tol)
         # print(frcmat.shape, a_s_rad.shape)
         for e in range(Nmodes_E+1) :
             for m in range(-targ_order, targ_order+1):

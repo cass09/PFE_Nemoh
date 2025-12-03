@@ -35,7 +35,6 @@ meshfile = os.path.join(MeshFolder, nemoh_def['mesh_filename'])
 dire = os.path.join(dirwecs, nemoh_def['name'])
 fdat = os.path.join(dire, f"{nemoh_def['mesh_filename'][:-4]}.dat")
 results = os.path.join(dire, "resultsBEM")
-folderFS = os.path.join(dire, "resultsFS")
 Motion = os.path.join(dire, "Motion")
 PlotFolder = os.path.join(dire, "Plots")
 mesh_ = os.path.join(dire, "mesh")
@@ -99,7 +98,7 @@ if body_def['sources']==1:
 else :
     Incident_potential="planar"
     S=''
-param_distance=4
+param_distance=2
 limite=10
 
 farm = project_data['farm_definition']
@@ -109,8 +108,8 @@ if farm['Free_surface']['Nx']>0:
     Y = np.linspace(-farm['Free_surface']['Ly']/2, farm['Free_surface']['Ly']/2, farm['Free_surface']['Ny'])
     grid = np.meshgrid(X, Y)
     FS=True
-    if not os.path.exists(folderFS):
-        os.makedirs(folderFS)
+    if not os.path.exists(Motion):
+        os.makedirs(Motion)
 while param_distance<=limite : 
     start_time = time.time()
     if farm['Configuration']=="logd":
@@ -141,7 +140,7 @@ while param_distance<=limite :
         print("Type configuration", farm["Type"])
         results_d = os.path.join(results, S+farm["Type"]+f"_da{distance}")
         coord = CIT.CreateConfig(N_bodies, radius_a*distance, farm["Type"])
-        limite=4
+        limite=10
     else :
         layout = farm['layout']
         print("Nb : ", len(layout))
@@ -220,7 +219,7 @@ while param_distance<=limite :
             sources_diff = resultD.sources
             if FS : 
                 fse = solver.compute_free_surface_elevation(grid, resultD)
-                outFS.SAVE_FS_TXT(fse, num, False, grid, folderFS)
+                outFS.SAVE_FS_TXT(fse, num, False, grid, Motion)
                 fse_tot=fse_tot+fse
             results_data.append({
                 "type": "diffraction",
@@ -245,7 +244,7 @@ while param_distance<=limite :
             sources_rad = resultR.sources
             if FS : 
                 fse = solver.compute_free_surface_elevation(grid, resultR)
-                outFS.SAVE_FS_TXT(fse, num, False, grid, folderFS)
+                outFS.SAVE_FS_TXT(fse, num, False, grid, Motion)
                 fse_tot=fse_tot+fse
             results_data.append({
                 "type": "radiation",
@@ -264,7 +263,7 @@ while param_distance<=limite :
         wavenumber[i]=pbR.wavenumber
         if FS : 
             incoming_fse = airy_waves_free_surface_elevation(grid, resultD)
-            outFS.SAVE_FS_TXT(fse_tot + incoming_fse, i+1, True, grid, folderFS)
+            outFS.SAVE_FS_TXT(fse_tot + incoming_fse, i+1, True, grid, Motion)
     end_time = time.time()
     out.write_params_file(results_data, water_depth, output_file=os.path.join(dire, "params.dat"))    
     if not os.path.exists(results):

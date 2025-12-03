@@ -96,7 +96,7 @@
 !     CLOSE(10)
 ! CML modif reading CoG in Nemoh.cal for BEM computation
 !                       in Hydro.txt for PIT computation
-        IF (InpNEMOHCAL%IntTheory%Cylsurface%Switch==1) THEN
+        IF (InpNEMOHCAL%IntTheory%Cylsurface%Switch==1 .OR. InpNEMOHCAL%IntTheory%ITsources==1) THEN
                 OPEN(10, FILE=TRIM(ID%ID)//'/Hydro.txt')
                 READ(10, *) Nbodies
                 ALLOCATE(COORD(Nbodies, 3))
@@ -116,7 +116,7 @@
         NF=NF/InpNEMOHCAL%Nbodies
         WRITE(fmt, '(A,I0,A)') '(', Nbodies*6, '(1X,E14.7))'
     DO IdBody=1,Nbodies
-        IF (InpNEMOHCAL%IntTheory%Cylsurface%Switch==1) THEN
+        IF (InpNEMOHCAL%IntTheory%Cylsurface%Switch==1 .OR. InpNEMOHCAL%IntTheory%ITsources==1) THEN
                 xG=COORD(IdBody, 1)
                 yG=COORD(IdBody, 2)
                 zG=COORD(IdBody, 3)
@@ -128,7 +128,7 @@
         write(*,*) "body =", IdBody, "Center of gravity: ", xG, yG, zG
         ! DO j=1+(IdBody-1)*NP,NP+(IdBody-1)*NP
         DO j=1,NP
-                IF (InpNEMOHCAL%IntTheory%Cylsurface%Switch==1) THEN
+                IF (InpNEMOHCAL%IntTheory%Cylsurface%Switch==1 .OR. InpNEMOHCAL%IntTheory%ITsources==1) THEN
                 ! coord in mesh file for body centered
                         X(j)=Mesh%X(1,j)-xG+xG
                         Y(j)=Mesh%X(2,j)-yG+yG

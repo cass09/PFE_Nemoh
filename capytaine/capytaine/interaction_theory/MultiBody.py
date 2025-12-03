@@ -138,16 +138,11 @@ class MultiBody(object):
             colAR = (np.array([range(dimk*(L+1))])+(Nm-Nmk)*(L+1)).reshape(-1)
             # print("T[k].shape:", T[k].shape)
             # print("colT.shape:", colT.shape)
-            # print("colT[:10]:", colT[:10])
-            # print("colAR[:10]:", colAR[:10])
             T_re = np.reshape(T[k][colT],(dimk*(L+1),dimk*(L+1)*Nb**2)) # remember that T is already transposed so we are already getting T columns
             # print("T_re.shape:", T_re.shape)
-            # print("T", T[k])
-            # print("T_re", T_re)
             AR = np.dot(AR_iso[k][:,colAR],T_re) # each row of aR is constant dof.
             # print("shape", AR.shape, AR_iso[k].shape)
             AR = np.reshape(AR,(dof,Nb,Nb*dimk*(L+1)))
-            # print("AR.shape", AR.shape)
             Fex_rad = np.zeros((dof,Nb,dof*Nb),dtype=complex)
             # Save amplitude coefficients
             if self.cylamplitude:
@@ -166,17 +161,11 @@ class MultiBody(object):
             Madd_t = Madd_iso[k,:,:].T.repeat(Nb,axis=0).reshape((dof,1,dof*Nb))
             Crad_t = Crad_iso[k,:,:].T.repeat(Nb,axis=0).reshape((dof,1,dof*Nb))
             Ones = np.eye(Nb,dtype=int).repeat(dof,axis=1) # will be used to distribute Crad_t over eye() type
-            # if self.Body.convention == 'N' :
             Frad_k = -(-freq[k]**2*Ones*Madd_t-1j*freq[k]*Ones*Crad_t)+Fex_rad
-            # else :
-            #     Frad_k = -(-freq[k]**2*Ones*Madd_t+1j*freq[k]*Ones*Crad_t)+Fex_rad
             # Redistribution to a conventional way
             Frad_k = Frad_k.reshape((Nb*dof,Nb*dof), order= 'F').T
             Madd[k,:,:] = 1/freq[k]**2*Frad_k.real
-            # if self.Body.convention == 'N' :
             Crad[k,:,:] = 1/freq[k]*Frad_k.imag
-            # else :
-            #     Crad[k,:,:] = -1/freq[k]*Frad_k.imag
         self.Madd= Madd
         self.Crad= Crad
 
@@ -340,14 +329,7 @@ class MultiBody(object):
         #have been already obtained transposed as well as
         #AP, aS, AR and aR
         T = np.transpose(T,(0,2,1))
-        # print(T.shape)
-        # print(T[0])
-        # Écriture dans le fichier
-        # with open("T.dat", 'w') as f:
-        #     f.write("# Matrice complexe (ligne par ligne)\n")
-        #     for row in T[0]:
-        #         line = "\t".join(f"{val.real:.6f}+{val.imag:.6f}j" for val in row)
-        #         f.write(line + "\n")
+       
         return T
     
     def RAO(self, directory, Mass, Kh) : 
@@ -446,6 +428,7 @@ class MultiBody(object):
         # print("aR", len(aR), len(aR[0]), len(aR[0][0]), len(aR[0][0][0]))
         # print("aR iso", AR_iso.shape)
         aS=self.aS
+        AS_iso = self.Body.AS
         k0=self.wnumber
         kl=self.wnumber_E
         depth=self.depth
@@ -527,14 +510,29 @@ class MultiBody(object):
                     dy = Y - coord[j, 1]
                     L = np.sqrt(dx**2 + dy**2)
                     alpha = np.arctan2(dy, dx)
-                    coef=aS[ind][beta][(2*M_S+1)*j:(2*M_S+1)*(j+1)]
+                    if Nb==1:
+                        coef=AS_iso[ind][beta][(2*M_S+1)*j*(Ne+1):(2*M_S+1)*(j*(Ne+1)+1)]
+                    else :
+                        coef=aS[ind][beta][(2*M_S+1)*j*(Ne+1):(2*M_S+1)*(j*(Ne+1)+1)]
+                    # print("ici", aS)
                     for mode in range(0, M_S + 1):
                         Hm = jv(mode, k * L) + 1j * yv(mode, k * L)
                         contribution = coef[M_S+mode] * Hm * np.exp(1j * mode * alpha)
                         if mode>0:
                             contribution+=coef[M_S-mode] * Hm * np.exp(-1j * mode * alpha)*(-1)**(mode)
                         # contribution = ((-1)**(-mode))*(g/w)*(1j*aS[ind][beta][idx_mode]) * Hm * np.exp(-1j * mode * alpha)
+                        if Ne>0:
+                            for l in range(1, Ne+1) :
+                                Km=kv(mode, kll[l-1]*L)
+                                if Nb==1:
+                                    coef_E=(AS_iso[ind][beta][(2*M_R+1)*(j*(Ne+1)+l):(2*M_R+1)*(j*(Ne+1)+l+1)])
+                                else :
+                                    coef_E=(aS[ind][beta][(2*M_R+1)*(j*(Ne+1)+l):(2*M_R+1)*(j*(Ne+1)+l+1)])
+                                contribution += coef_E[M_S+mode] * Km * np.cos(kll[l-1]*depth) * np.exp(1j * mode * alpha)
+                                if mode>0:
+                                    contribution+=coef_E[M_S-mode] * Km * np.cos(kll[l-1]*depth)* np.exp(-1j * mode * alpha)*(-1)**(mode)
                         phiS[ind, beta] += contribution
+
 
             # normalization
             # *(1j*g/w) pour phi et *(-1j * w / g) pour ETA
@@ -544,8 +542,8 @@ class MultiBody(object):
             # calcul of the total potential
             for beta in range(Ndir):
                 phiI = np.exp(1j * k * (X * np.cos(direction[beta]) + Y * np.sin(direction[beta])))
-                ETA[ind, beta] = (phiS[ind, beta] + phiR[ind]+phiI) #* (1j * w / g)
-            
+                # ETA[ind, beta] = (phiS[ind, beta] + phiR[ind]+phiI) #* (1j * w / g)
+                ETA[ind, beta] = phiI
         self.ETA=ETA
         self.ETA_R=ETA_R 
         self.ETA_S=ETA_S

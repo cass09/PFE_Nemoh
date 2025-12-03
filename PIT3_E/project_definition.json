@@ -1,51 +1,51 @@
 {   
     "nemoh_project": {
-        "name": "PIT3_cylinder_mesh8",
+        "name": "PIT3_test",
         "folder": "/home/cassandra/Documents/PFE_MOREnergy/Nemoh_myVersion/PIT3_E/wec_inputs",
-        "mesh_filename": "Cylinder.dat",
+        "mesh_filename": "barge.dat",
         "mesh_type": "NEMOH",
-        "run_bem": true
+        "run_bem": false
     },
     "single_body_definition": {
         "modes": [[1,1,0,0,0.0,0.0,0.0], [1,0,1,0,0.0,0.0,0.0], [1,0,0,1,0.0,0.0,0.0], [2,1,0,0,0.0,0.0,0.0], [2,0,1,0,0.0,0.0,0.0], [2,0,0,1,0.0,0.0,0.0]],
         "spectral_param": {
             "_comment": "(format w [rad/s], f [Hz=1/s], T [s], k [1/m] or L [m])",
-            "min": 0.3,
-            "max": 2,
-            "number": 20,
-            "format": "w"
+            "min": 0.05,
+            "max": 0.5,
+            "number": 2,
+            "format": "f"
         },
         "direction": {
             "_comment": "min and max must be 0 and 360.0 DEG. (format DEG or RAD)",
             "min": 0.0,
             "max": 360.0,
-            "number": 11,
+            "number": 5,
             "format": "DEG"
         },
-        "water_depth": 20,
+        "water_depth": 12,
         "cylinder": {
             "_comment": "Radius should be at least 1 panel larger than the body mesh.",
-            "radius": 5.1,
-            "azimuthal_discretization": 50,
-            "depth_discretization": 30
+            "radius": 6.5,
+            "azimuthal_discretization": 35,
+            "depth_discretization": 15
         },
         "comment" : " 0 GAUSS ELIM; 1 LU DECOMP; 2 GMRES",
         "solver" : 1,
-        "sources" : 0
+        "sources" : 1
     },
     "farm_definition": {
         "Configuration" : "",
         "Type" : "Nb2_X",
-        "N_bodies" : 2,
-        "body_dim" : 5,
+        "N_bodies" : 1,
+        "body_dim" : 3,
         "layout": [
             {"name":"body1", "position": [0,0]},
-            {"name":"body2", "position": [26.2,0]}
+            {"name":"body1", "position": [50,0]}
         ], 
         "wave_directions": {
             "_comment": "Incoming wave directions (format DEG or RAD)",
             "min": 0.0,
-            "max": 360.0,
+            "max": 180.0,
             "number": 1,
             "format": "DEG"
         },
@@ -61,9 +61,9 @@
         },
         "Free_surface": {
             "Nx": 0,
-            "Ny": 60,
-            "Lx": 100,
-            "Ly": 30
+            "Ny": 10,
+            "Lx": 60,
+            "Ly": 60
         },
         "_comment": "Output Type (format DAT or H5F)",
         "Output_type" : "DAT",

@@ -8,13 +8,14 @@ from utils import output
 from utils import plot
 from utils import BEMoutput as out
 import utils.files as UT
+import time
 
 # import utils.files as UT
 import capytaine as cpt
 from capytaine.post_pro import rao
 from capytaine.bem.airy_waves import froude_krylov_force
 from capytaine.bem.cylindrical_waves import froude_krylov_force_cyl
-from capytaine.interaction_theory.BodyMesh import get_panel_centers_cylindrical
+from capytaine.interaction_theory.BodyMesh import get_panel_centers_cylindrical, OCmesh
 from capytaine.interaction_theory.Body import Body
 from capytaine.interaction_theory.MultiBody import MultiBody as MB
 import os
@@ -76,13 +77,14 @@ if min_w>max_w :
 omega = np.linspace(min_w, max_w,
                     body_def['spectral_param']['number']) # rad/s 
 
-directions = np.linspace(body_def['direction']['min'],
-                            body_def['direction']['max'],
-                            body_def['direction']['number'],
-                            endpoint=False) # degrees
-if body_def['direction']['format'] == 'DEG':
-    directions *= np.pi/180.0
-
+if body_def['direction']['format'] == 'Nbeta':
+    Nbeta=body_def['direction']['number']
+elif body_def['direction']['format'] == 'M':
+    Nbeta=2*body_def['direction']['number']+1
+else :
+    print("error : type not known, Nbeta or M")
+directions = np.linspace(0.0, 360.0, Nbeta, endpoint=False) # degrees
+directions *= np.pi/180.0 # radians                  
 
 #################################################################
 #################################################################
@@ -90,24 +92,43 @@ if body_def['direction']['format'] == 'DEG':
 #################################################################
 #################################################################
 cpt.set_logging('WARNING')
-barge = cpt.load_mesh(meshfile, file_format='nemoh')
-body = cpt.FloatingBody(mesh=barge,
-                        dofs=cpt.rigid_body_dofs(rotation_center=(0, 0, 0)),
-                        center_of_mass=(0, 0, 0))
+geo = cpt.load_mesh(meshfile, file_format='nemoh')
+# if nemoh_def["symmetry"]==1:
+#     geo = cpt.ReflectionSymmetricMesh(geo, cpt.xOz_Plane, name=f"{nemoh_def['mesh_filename'][:-4]}")
+
+if len(body_def['DOF']) == 6:
+    # On crée directement avec rigid_body_dofs
+    body = cpt.FloatingBody(
+        mesh=geo,
+        dofs=cpt.rigid_body_dofs(rotation_center=body_def['rotation_center']),
+        center_of_mass=(0, 0, 0)
+    )
+    hydrostatics = body.compute_hydrostatics(rho=1000.0)
+
+else:
+    # On crée un corps vide et ajoute les DOFs une à une
+    body = cpt.FloatingBody(mesh=geo, center_of_mass=(0, 0, 0))
+    for dof in body_def['DOF']:
+        if dof in ['Surge', 'Sway', 'Heave']:
+            body.add_translation_dof(name=dof)
+        elif dof in ['Roll', 'Pitch', 'Yaw']:
+            body.add_rotation_dof(name=dof)
+        else:
+            raise ValueError(f"DOF inconnue : {dof}")
 
 # print("Degrés de liberté du corps :", list(body.dofs.keys()))
-hydrostatics = body.compute_hydrostatics(rho=1000.0)
-
-
 vect_dof=list(body.dofs)
 solver = cpt.BEMSolver()
+
 
 
 print("------------------ BEM resolution with Capytaine -------------")
 print("name : ", nemoh_def['name'])
 print("Nw : ", len(omega))
 print("Nbeta isolated : ", len(directions))
-print("DOF : ", len(vect_dof))
+print("DOF : ", len(vect_dof), vect_dof)
+print("Depth : ", water_depth)
+
 UT.nemoh_structure(dire)
 farm = project_data['farm_definition']
 L=farm["Ne_modes"]
@@ -120,32 +141,38 @@ if body_def['sources']==1:
     Incident_potential="cylindrical"
 else :
     Incident_potential="planar"
+    OC=body_def['cylinder']
+    OuterCylinder=OCmesh(OC['radius'], OC['azimuthal_discretization'], OC['depth_discretization'], water_depth)
 results_data = []
 wavenumber=np.zeros(len(omega))
 Np=len(omega)*(len(directions)*(L+1)+len(vect_dof))
-num = 1
-for i, w in enumerate(omega):
-    print("problem n°", num, "/",Np)
 
-    for e in modeL :
-        for k, angle in enumerate(directions) :
-        # --- DIFFRACTION ---
-            pbD = cpt.DiffractionProblem(body=body, wave_direction=angle, 
+if run_nemoh : 
+    start_time = time.time()
+    num = 1
+    for i, w in enumerate(omega):
+        print("problem n°", num, "/",Np)
+
+        for e in modeL :
+            for k, angle in enumerate(directions) :
+            # --- DIFFRACTION ---
+                pbD = cpt.DiffractionProblem(body=body, wave_direction=angle, 
                             omega=w, water_depth=water_depth, BC = Incident_potential, modeM=modeM[k], modeL=e)
-            resultD = solver.solve(pbD)
-            if body_def['sources']==1:
-                fk_force = froude_krylov_force_cyl(pbD)
-            else :
-                fk_force = froude_krylov_force(pbD)
+                resultD = solver.solve(pbD)
+                if body_def['sources']==1:
+                    fk_force = froude_krylov_force_cyl(pbD)
+                else :
+                    fk_force = froude_krylov_force(pbD)
 
-            excitation_force = {
-            dof: fk_force.get(dof, 0.0) + resultD.forces.get(dof, 0.0)
-            for dof in resultD.forces
-            }
-            # excitation_force = resultD.forces  # dict par DOF
-            sources_diff = resultD.sources    
+                excitation_force = {dof: fk_force.get(dof, 0.0) + resultD.forces.get(dof, 0.0) for dof in resultD.forces}
+                # excitation_force = resultD.forces  # dict par DOF
+                sources_diff = resultD.sources    
+                if body_def['sources']==1:
+                    cylsurface = None
+                else :
+                    cylsurface = solver.compute_cylsurface_elevation(OuterCylinder, resultD)
 
-            results_data.append({
+                results_data.append({
                 "type": "diffraction",
                 "omega": w,
                 "beta": angle,
@@ -154,20 +181,25 @@ for i, w in enumerate(omega):
                 "modeL" : e,
                 "excitation_force": excitation_force,
                 "sources": sources_diff,
+                "cylsurface": cylsurface,
                 "added_mass": None,
                 "damping": None
-            })
-            num += 1
-    # --- RADIATION ---
-    for dof in vect_dof:
-        pbR = cpt.RadiationProblem(body=body, radiating_dof=dof, omega=w, water_depth=water_depth)
-        resultR = solver.solve(pbR)
+                })
+                num += 1
+        # --- RADIATION ---
+        for dof in vect_dof:
+            pbR = cpt.RadiationProblem(body=body, radiating_dof=dof, omega=w, water_depth=water_depth)
+            resultR = solver.solve(pbR)
 
-        added_mass = resultR.added_mass
-        damping = resultR.radiation_damping
-        sources_rad = resultR.sources
+            added_mass = resultR.added_mass
+            damping = resultR.radiation_damping
+            sources_rad = resultR.sources
+            if body_def['sources']==1:
+                cylsurfaceR = None
+            else :
+                cylsurfaceR = solver.compute_cylsurface_elevation(OuterCylinder, resultR)
 
-        results_data.append({
+            results_data.append({
             "type": "radiation",
             "omega": w,
             "beta": None,
@@ -176,25 +208,52 @@ for i, w in enumerate(omega):
             "modeL" : None,
             "excitation_force": None,
             "sources": sources_rad,
+            "cylsurface": cylsurfaceR,
             "added_mass": added_mass,
             "damping": damping
-        })
+            })
 
-        num += 1
-    wavenumber[i]=pbR.wavenumber
-out.write_params_file(results_data, output_file=os.path.join(dire, "params.dat"))    
-if not os.path.exists(results):
-    os.makedirs(results)
-if L==0 :
+            num += 1
+        wavenumber[i]=pbR.wavenumber
+    end_time = time.time()
+    out.WriteComputeTime(results, end_time-start_time)
+    out.write_params_file(results_data, water_depth, output_file=os.path.join(dire, "params.dat"))    
+    if not os.path.exists(results):
+        os.makedirs(results)
+    if body_def['sources']==0:
+        out.WriteCylsurfaceByProblem(results_data, OuterCylinder, results_folder=results)
+    else:
+        out.WriteSourcesByProblem(results_data, body, results_folder=results)
     out.WriteCapytaineDataFromResults(results_data, results_folder=results, dofs=vect_dof)
-    # out.WriteSourcesByProblem(results_data, body, results_folder=results)
-Madd_iso, Crad_iso, Fex_iso = out.extract_hydrodynamic_quantities_with_beta(results_data, vect_dof, omega, directions, L)
-centers, areas=get_panel_centers_cylindrical(meshfile)
-SourcesS, SourcesR = out.extract_sources_by_problem(results_data, omega, directions, vect_dof, L, len(areas))
 
-WEC = Body(omega, directions, water_depth, L, wavenumber, Fex_iso)
-WEC.Transfers(SourcesS, SourcesR, centers, areas)
-WEC.Write(results, L)
+    Madd_iso, Crad_iso, Fex_iso = out.extract_hydrodynamic_quantities_with_beta(results_data, vect_dof, omega, directions, L)
+    if body_def['sources']==1:
+        centers, areas=get_panel_centers_cylindrical(meshfile)
+        SourcesS, SourcesR = out.extract_sources_by_problem(results_data, omega, directions, vect_dof, L, len(areas))
+    else : 
+        phiS, phiR = out.extract_potential_by_problem(results_data, omega, directions, vect_dof, L, OC['azimuthal_discretization'], OC['depth_discretization'])
+else :
+    # print("to do")
+    # out.CheckData() here or in Body 
+    wavenumber = out.wavenumber(results)
+    Madd_iso, Crad_iso, Fex_iso = out.Read_HydroCoefs(results, omega, directions, vect_dof)
+    if body_def['sources']==1:
+        centers, areas=get_panel_centers_cylindrical(meshfile)
+        SourcesS, SourcesR = out.Read_Sources_From_Files(omega, directions, vect_dof, L, len(areas), results)
+    else : 
+        phiS, phiR = out.Read_Potentials(omega, directions, vect_dof, OC['azimuthal_discretization'], OC['depth_discretization'], results)
+    
+if body_def['sources']==1:
+    WEC = Body(omega, directions, water_depth, L, wavenumber, Fex_iso, True)
+    WEC.Transfers(SourcesS, SourcesR, (centers, areas))
+else : 
+    WEC = Body(omega, directions, water_depth, L, wavenumber, Fex_iso, False)
+    # OC_th = np.array([OuterCylinder[j][1] for j in range(OC['azimuthal_discretization'])])  
+    OC_th = np.linspace(0, 2*np.pi, OC['azimuthal_discretization'], endpoint = False)   
+    OC_z = np.array([OuterCylinder[i * OC['azimuthal_discretization']][2] for i in range(OC['depth_discretization'])])
+    WEC.Transfers(phiS, phiR, (OC['radius'], OC_th,OC_z))
+
+WEC.Write(results, L, body_def['sources'])
 #################################################################
 #################################################################
 ################### DIRECT MATRIX METHOD ########################
@@ -214,8 +273,8 @@ if betas['format'] == 'DEG':
 print("Nbeta system : ", len(directionMB))
 
 
-param_distance=1
-limite=1023
+param_distance=2
+limite=600
 # radius_barge=6.36
 diameter= 2*body_def['cylinder']['radius']
 
@@ -251,14 +310,15 @@ while param_distance<=limite :
         N_bodies=len(layout)
         coord = np.zeros((len(layout), 2))
         labels = []
-        for ib, body in enumerate(layout):
-            coord[ib, :] = body["position"]
-            labels.append(body["name"])
+        for ib, bodyP in enumerate(layout):
+            coord[ib, :] = bodyP["position"]
+            labels.append(bodyP["name"])
         if len(coord)>1 :
             distance = np.linalg.norm(coord[1] - coord[0])
             print(f"Distance between the two bodies center : {distance}")
-            # distance = distance - diameter
-            print(f"Distance between the two bodies : {distance}")
+            # distance = distance - farm["body_dim"]*2
+            a=farm["body_dim"]
+            print(f"Distance between the two bodies : {distance- a*2}")
         else :
             distance=0
         param_distance=limite+1
@@ -269,9 +329,21 @@ while param_distance<=limite :
     
     if farm['RAO'] :
         print("-- RAO calculation activated")
+        inertia_matrix = body.build_inertia_matrix_from_translated_bodies(coord) 
+        # print("M", inertia_matrix)
+        hydrostatic_stiffness = body.build_hydrostatic_stiffness_from_translated_bodies(coord)
+        # print("K", hydrostatic_stiffness)
         if not os.path.exists(Motion):
             os.makedirs(Motion)
-        WECArr.RAO(os.path.join(dire, "Mechanics")) 
+        WECArr.RAO(os.path.join(dire, "Mechanics"), inertia_matrix, hydrostatic_stiffness) 
+
+    if farm['Free_surface']['Nx'] > 0 :
+        print("-- Free surface calculation activated")
+        if not os.path.exists(Motion):
+            os.makedirs(Motion)
+        WECArr.FreeSurface(coord, farm['Free_surface']['Nx'], farm['Free_surface']['Ny'], 
+                           farm['Free_surface']['Lx'], farm['Free_surface']['Ly'], farm["Ne_modes"]) 
+
 #################################################################
 #################################################################
 ######################### OUTPUT ################################
@@ -279,7 +351,7 @@ while param_distance<=limite :
 #################################################################
     if not os.path.exists(resultsIT):
         os.makedirs(resultsIT)
-    out=output.WriteData(WECArr, directionMB, farm, distance, resultsIT, results_h5, Motion)
+    out=output.WriteData(WECArr, directionMB, farm, distance, resultsIT, results_h5, Motion, body_def['sources'])
     if len(farm['Plot_DOF'])>0 :
         if not os.path.exists(PlotFolder):
             os.makedirs(PlotFolder)
@@ -292,7 +364,7 @@ while param_distance<=limite :
 
 
 assert len(WECArr.Fex[:, 0, 0]) == len(WECArr.Madd[:, 0, 0]) == len(WECArr.period)
-assert len(WECArr.Fex[0, 0, :]) == len(WECArr.Madd[0, :, 0]) == len(WECArr.Madd[0, 0, :]) == N_bodies*len(body_def['modes'])
+assert len(WECArr.Fex[0, 0, :]) == len(WECArr.Madd[0, :, 0]) == len(WECArr.Madd[0, 0, :]) == N_bodies*len(vect_dof)
 assert len(WECArr.Fex[0, :, 0]) == len(directionMB)
 
 ## NOTE: Notice you only need the instance WEC to run the DIRECT MATRIX METHOD.

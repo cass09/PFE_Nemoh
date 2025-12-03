@@ -610,7 +610,7 @@ def Read_Sources_From_Files(unique_omegas, unique_betas, dofs, L, Npanels, folde
 
 def wavenumber(folder):
     filename = os.path.join(folder, "Data_waves.dat")
-    data=np.loadtxt(filename, skiprows=1)
+    data=np.loadtxt(filename, skiprows=1, ndmin=2)
     return data[:,1]
 
 def WriteComputeTime(results_folder, time):

@@ -18,7 +18,7 @@ import cmath
 import os
 import json
 
-project_data = json.load(open('project_definition2.json', 'r'))
+project_data = json.load(open('project_definition.json', 'r'))
 
 #################################################################
 #################################################################
@@ -38,12 +38,11 @@ fdat = os.path.join(dire, f"{nemoh_def['mesh_filename'][:-4]}.dat")
 convention = 'N'
 results = os.path.join(dire, "results")
 resultsIT = os.path.join(dire, "resultsIT")
-results_h5 = os.path.join(dire, "Farm_DMM.h5")
+results_h5 = os.path.join(dire, f"{nemoh_def['name']}_results.h5")
 Motion = os.path.join(dire, "Motion")
 PlotFolder = os.path.join(dire, "Plots")
-mesh_ = os.path.join(dire, "mesh")
-picklefile = os.path.join(dire, f"{nemoh_def['name']}_results.p") 
-picklefile_E = os.path.join(dire, f"{nemoh_def['name']}_results_E.p") 
+# mesh_ = os.path.join(dire, "mesh")
+Operators = os.path.join(dire, "Operators")
 
 
 body_def = project_data['single_body_definition']
@@ -129,6 +128,9 @@ print("DOF : ", len(body_def['modes']))
 farm = project_data['farm_definition']
 if farm["Ne_modes"]>0 :
     print("-- with evanescent waves (Ne modes =", farm["Ne_modes"], ")")
+    picklefile = os.path.join(dire, f"{nemoh_def['name']}_results_E{farm['Ne_modes']}.p") 
+else : 
+    picklefile = os.path.join(dire, f"{nemoh_def['name']}_results.p") 
 
 if body_def['cylinder']['radius']>0 :
     Method=0
@@ -138,19 +140,13 @@ if body_def['sources']==1 :
 ## generate wec (diffraction and force transfer matrices and radiation coefficents)
 WEC = Body(freqs, directions*np.pi/180., depth, farm["Ne_modes"], convention)
 
-if farm["Ne_modes"]>0 : 
-    Evanescent=True
-    WEC.Transfers(dire, results, results, Evanescent, Method, BEM='N', Tol= 1e-6)
-    WEC.PickTransfers(picklefile_E, Method, save=True)
-    loaded_WEC = WEC.PickTransfers(picklefile_E, Method, save=False)
-else : 
-    # if not UT.file_exist(picklefile):
-    Evanescent=False
-    WEC.Transfers(dire, results, results, Evanescent, Method, BEM='N', Tol= 1e-9)
+if not UT.file_exist(picklefile):
+    WEC.Transfers(dire, results, results, Method, BEM='N', Tol= 1e-9)
     WEC.PickTransfers(picklefile, Method, save=True)
-    loaded_WEC = WEC.PickTransfers(picklefile, Method, save=False)
-WEC.Write(results, Evanescent, Method)
-
+    if not os.path.exists(Operators):
+        os.makedirs(Operators)
+    WEC.Write(Operators, Method)
+loaded_WEC = WEC.PickTransfers(picklefile, Method, save=False)
 
 #################################################################
 #################################################################
@@ -188,6 +184,20 @@ while param_distance<=limite :
         print("Type configuration", farm["Type"])
         coord = CIT.CreateConfig(N_bodies, diameter+distance, farm["Type"])
         limite=600
+    if farm['Configuration']=="dmin":
+        N_bodies=farm["N_bodies"]
+        print("Nb : ", N_bodies)
+        if N_bodies>1 :
+            radius_a=farm["body_dim"]
+            # distance = body_def['cylinder']['radius']+radius_a
+            distance = 4*radius_a
+            print(f"Distance between the two bodies center : {distance}")
+            print(f"Distance between the two bodies : {distance-2*radius_a}")
+        else :
+            distance=0
+        print("Type configuration", farm["Type"])
+        coord = CIT.CreateConfig(N_bodies, distance, farm["Type"])
+        param_distance=limite+1
     elif farm['Configuration']=="d/a":
         N_bodies=farm["N_bodies"]
         print("Nb : ", N_bodies)
@@ -200,7 +210,7 @@ while param_distance<=limite :
             distance=0
         print("Type configuration", farm["Type"])
         coord = CIT.CreateConfig(N_bodies, radius_a*distance, farm["Type"])
-        limite=16
+        limite=10
     else :
         layout = farm['layout']
         print("Nb : ", len(layout))
@@ -221,8 +231,8 @@ while param_distance<=limite :
         param_distance=limite+1
 
     WECArr = MB(directionMB, WEC, cylamplitude=True)
-    WECArr.Scattering(coord, Evanescent) #  WECArr.Fex.shape (Num freq, Num dir, Num dof)
-    WECArr.Radiation(coord, Evanescent) # Available: WECArr.Madd and WECArr.Crad, which stand for added mass and radiation damping, respectively: WECArr.Madd.shape (Num freq, Num dof, Num dof)
+    WECArr.Scattering(coord) #  WECArr.Fex.shape (Num freq, Num dir, Num dof)
+    WECArr.Radiation(coord) # Available: WECArr.Madd and WECArr.Crad, which stand for added mass and radiation damping, respectively: WECArr.Madd.shape (Num freq, Num dof, Num dof)
     # WECArr.Write(resultsIT, farm["Ne_modes"]) # Available: WECArr.Madd and WECArr.Crad, which stand for added mass and radiation damping, respectively: WECArr.Madd.shape (Num freq, Num dof, Num dof)
     
     if farm['RAO'] :
@@ -231,6 +241,7 @@ while param_distance<=limite :
             os.makedirs(Motion)
         Mechanics = os.path.join(dire, "Mechanics")
         directoryH=Nemoh.InputHydro(dire, coord)
+        print(coord)
         statusH = Nemoh.RunHydro(directoryH, nemohdynamics)
         WECArr.RAO(Mechanics) 
     if farm['Kochin']['number']>0 :
@@ -242,7 +253,6 @@ while param_distance<=limite :
                         farm['Kochin']['number'])
         if farm['Kochin']['format']=='DEG' :
             thetaK=thetaK*np.pi/180
-        # print(thetaK)
         WECArr.Kochin(thetaK) 
 
     if farm['Free_surface']['Nx'] > 0 :
@@ -267,7 +277,7 @@ while param_distance<=limite :
         out=plot.PlotData(WECArr, farm, distance, directionMB, farm['Plot_DOF'], PlotFolder)
     
     if farm['Configuration']=="d/a":
-        param_distance=param_distance*2
+        param_distance=param_distance+1
     else :
         param_distance=param_distance*2
 
@@ -280,3 +290,4 @@ assert len(WECArr.Fex[0, :, 0]) == len(directionMB)
 ## Once you've got WEC you can skip the part SINGLE BODY HYDRODYNAMICS and go straight to DIRECT MATRIX METHOD for different array configurations (coord) or different wave headings (directionMB).
 # plt.show()
 print('end of script')
+UT.nemoh_clean(dire)

@@ -1,16 +1,16 @@
 
 distance=1
-configuration="logd"
+configuration=""
 config_type="X"
-BEM_Nb=2						# Number of bodies
-Nom_projet="BEM_barge_FS"
-FS=1
+BEM_Nb=1		# Number of bodies
+Nom_projet="BEM_PontoonWings_T"
+FS=0
 
 # --- Description of floating bodies -  ----------------------------------------------------------------------------------------------
-CdG1=(0.0 0.0 0.0)
-mesh_file1="barge.dat"			# Name of mesh file
-Rcyl=6.36
-Ra=5
+CdG1=(0.0 0.0 -2.0)
+mesh_file1="PontoonWingsSYMm3.dat"			# Name of mesh file
+Rcyl=3.25
+Ra=3
 
 if [[ "$configuration" == "logd" ]]; then
     source tools_bash/config.sh
@@ -21,25 +21,25 @@ else
     Dossier_Project=$Nom_projet
     lenghtX=0
     lenghtY=30
-    translate2=(13.72 0.0 0.0)
+    translate2=(7.48 0.0 0.0)
     CdG2=(0.0 0.0 0.0)
-    mesh_file2="barge.dat"		# Name of mesh file
+    mesh_file2="BargeX6Y6H6SYM_lidm6.dat"		# Name of mesh file
 fi
 
-N_DOF=6			# Number of degrees of freedom
+N_DOF=6	# Number of degrees of freedom
 N_Forces=6						# Number of resulting generalised forces
 # 1 activated
 DOF=(1  1   1   1   1   1)   # Surge, Sway, Haeve, Roll, Pitch, Yaw
 FORCES=(1  1   1   1   1   1)  # Fx, Fy, Fz, Mx, My, Mz
 
 #  --- Load cases to be solved -------------------------------------------------------------------------------------------------------
-w_type=1  
-Nw=3
-w_min=0.3
-w_max=2			# Freq type 1,2,3=[rad/s,Hz,s], Number of wave frequencies/periods, Min, and Max
+w_type=3
+Nw=6
+w_min=3
+w_max=8		# Freq type 1,2,3=[rad/s,Hz,s], Number of wave frequencies/periods, Min, and Max
 BEM_Nbeta=1	
 BEM_BetaMin=0.0
-BEM_BetaMax=380.0				# Number of wave directions, Min and Max (degrees)
+BEM_BetaMax=180.0				# Number of wave directions, Min and Max (degrees)
 
 # --- Post processing ---------------------------------------------------------------------------------------------------------------
 IRF=0
@@ -51,19 +51,23 @@ KochinMin=0.0
 KochinMax=360.0			# Kochin function 		# Number of directions of calculation (0 for no calculations), Min and Max (degrees)
 
 # Free surface elevation 	# Number of points in x direction (0 for no calcutions) and y direction and dimensions of domain in x and y direction
-FS_Nx=$lenghtX
-FS_Ny=$lenghtY
-FS_Lx=$lenghtX
-FS_Ly=$lenghtY
+# FS_Nx=$lenghtX
+# FS_Ny=$lenghtY
+# FS_Lx=$lenghtX
+# FS_Ly=$lenghtY
+FS_Nx=51	# 21 or 51
+FS_Ny=111	# 23 or 111
+FS_Lx=400
+FS_Ly=220
 	
-RAO=0		# Response Amplitude Operator (RAO), 0 no calculation, 1 calculated -> Inertia.cal
+RAO=1		# Response Amplitude Operator (RAO), 0 no calculation, 1 calculated -> Inertia.cal
 w_type_output=1						# output freq type, 1,2,3=[rad/s,Hz,s]
 
 
 # --- Environment ------------------------------------------------------------------------------------------------------------------
 RHO=1000.0					# RHO 		# KG/M**3 	# Fluid specific volume 
 G=9.81					# G			# M/S**2	# Gravity
-DEPTH=20						# DEPTH			# M		# Water depth
+DEPTH=250						# DEPTH			# M		# Water depth
 XEFF=0.0	
 YEFF=0.0					# XEFF YEFF		# M		# Wave measurement point
 
