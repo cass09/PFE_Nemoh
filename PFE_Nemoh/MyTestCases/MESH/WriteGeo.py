@@ -111,5 +111,5 @@ def write_nemoh_parallelepiped_mesh(Geo, Lx=3, Ly=2, Lz=1, ndiv=3, nom="barge", 
     print(f"✅ '{filename}' créé avec {n_nodes} noeuds et {n_elements} éléments.")
 
 # 🔧 Exemple d'utilisation :
-write_nemoh_parallelepiped_mesh(Geo=False, Lx=6, Ly=6, Lz=6, ndiv=29, nom="Barge", SYM=True, lid=True)
+write_nemoh_parallelepiped_mesh(Geo=False, Lx=22, Ly=4, Lz=4, ndiv=29, nom="FB1", SYM=True, lid=False)
 

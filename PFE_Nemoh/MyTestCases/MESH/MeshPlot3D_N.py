@@ -102,5 +102,5 @@ def plot_quadrilateral_mesh(vertices, quads):
     plt.show()
 
 # Exemple d'utilisation :
-vertices, quads = read_nemoh_rectangular_dat("BargeX6Y6H6SYM.dat")
+vertices, quads = read_nemoh_rectangular_dat("PontoonSYMm1.dat")
 plot_quadrilateral_mesh(vertices, quads)

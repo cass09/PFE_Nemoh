@@ -365,17 +365,17 @@ def Trace_RAD(fileBEM, filePIT, filePIT_REF, file, nom, indice, titre, d):
         marker2 = markers[k+len(indice) % len(markers)]
         if AD :
             plt.plot(a*data[:,1], [mat[i][j]/ norm_array[c] for c, mat in enumerate(Coef_BEM)], linestyle='-', marker=marker, color=color, markersize=5, label=f"BEM {ij[0]}_{ij[1]}")
-            plt.plot(a*data[:,1], [mat[i][j]/ norm_array[c] for c, mat in enumerate(Coef_PIT)], linestyle=':', marker=marker2, color=color2, markersize=5, label=f"PIT {ij[0]}_{ij[1]}")
+            plt.plot(a*data[:,1], [mat[i][j]/ norm_array[c] for c, mat in enumerate(Coef_PIT)], linestyle=':', marker=marker2, color=color2, markersize=5, label=f"ITM {ij[0]}_{ij[1]}")
         else :
-            plt.plot(freq_BEM, [mat[i][j] for mat in Coef_BEM], linestyle='-', marker=marker, color=color, markersize=5, label=f"BEM {ij[0]}_{ij[1]}")
-            plt.plot(freq_PIT, [mat[i][j] for mat in Coef_PIT], linestyle=':', marker=marker2, color=color2, markersize=5, label=f"PIT {ij[0]}_{ij[1]}")
+            plt.plot(freq_BEM, [mat[i][j] for mat in Coef_BEM], linestyle='-', marker="o", color=color, markersize=3, label=f"BEM {ij[0]}_{ij[1]}")
+            plt.plot(freq_PIT, [mat[i][j] for mat in Coef_PIT], linestyle=':', marker="x", color=color, markersize=6, label=f"STM {ij[0]}_{ij[1]}")
         
         if REF :
             color3 = couleurs[k+len(indice)+1 % len(couleurs)]
             marker3 = markers[k+len(indice)+2 % len(markers)]
-            plt.plot(freq_PIT_REF, [mat[i][j] for mat in Coef_PIT_REF], linestyle=':', marker=marker3, color='black', markersize=6, label=f"PIT REF {ij[0]}_{ij[1]}")
+            plt.plot(freq_PIT_REF, [mat[i][j] for mat in Coef_PIT_REF], linestyle=':', marker=marker3, color='black', markersize=3, label=f"OCM {ij[0]}_{ij[1]}")
     plt.legend(loc='best', fontsize='small', frameon=True)
-    plt.savefig(f"{file}_{bis}{nom}_{d}_M{indice}.png", dpi=300)
+    plt.savefig(f"{file}_{bis}{nom}_{d}_M{indice}.pdf")
     plt.close()
     return
 
@@ -388,7 +388,7 @@ def Trace_Fex(fileBEM, filePIT, filePIT_phase, filePIT_REF, filePIT_phase_REF, f
         beta_PIT_REF, freq_PIT_REF, Coef_PIT_REF = read_Fex_PIT(filePIT_REF)
         beta_PIT_REF, freq_PIT_REF, Phase_PIT_REF = read_Fex_PIT(filePIT_phase_REF)
         REF=True
-    couleurs = ['b', 'm', 'r', 'gold', 'lime', 'g', 'c', 'm', 'y', 'k']  # palette de couleurs (réutilisée si plus de 7 courbes)
+    couleurs = ['b', 'r', 'm','gold', 'lime', 'g', 'c', 'm', 'y', 'k']  # palette de couleurs (réutilisée si plus de 7 courbes)
     markers = ['s', 'o', '<', '^','x', '+', '*']
     if beta : # Several wave directions
         plt.figure(figsize=(10, 8))
@@ -404,7 +404,7 @@ def Trace_Fex(fileBEM, filePIT, filePIT_phase, filePIT_REF, filePIT_phase_REF, f
             plt.plot(freq_PIT, [row[j] for row in Coef_PIT[k]], linestyle=':', marker=marker, color=color, markersize=5, label=f"PIT beta= {beta_PIT[k]:.1f}°")   
         plt.legend()
         plt.grid(True)
-        plt.savefig(f"{file}_BETAS{k+1}_Fex_abs_{d}_B{num_dof}.png", dpi=300)
+        plt.savefig(f"{file}_BETAS{k+1}_Fex_abs_{d}_B{num_dof}.pdf")
         plt.close()
 
         plt.figure(figsize=(10, 8))
@@ -433,17 +433,15 @@ def Trace_Fex(fileBEM, filePIT, filePIT_phase, filePIT_REF, filePIT_phase_REF, f
             nom_dof=nom_dof+"_"+f"{dof}"
             color = couleurs[k % len(couleurs)]
             marker = markers[k % len(markers)]
-            color2 = couleurs[k+len(num_dof) % len(couleurs)]
-            marker2 = markers[k+len(num_dof) % len(markers)]
-            plt.plot(freq_BEM, Coef_BEM_abs[i][:, j], linestyle='-', marker=marker, color=color, markersize=5, label=f"BEM dof {j+1}")   
-            plt.plot(freq_PIT, [row[j] for row in Coef_PIT[i]], linestyle=':', marker=marker2, color=color2, markersize=4, label=f"PIT dof {j+1}")   
+            plt.plot(freq_BEM, Coef_BEM_abs[i][:, j], linestyle='-', marker="o", color=color, markersize=3, label=f"BEM dof {j+1}")   
+            plt.plot(freq_PIT, [row[j] for row in Coef_PIT[i]], linestyle='--', marker="x", color=color, markersize=6, label=f"STM dof {j+1}")   
             if REF :
                 color3 = couleurs[k+len(num_dof)+1 % len(couleurs)]
                 marker3 = markers[k+len(num_dof)+2 % len(markers)]
-                plt.plot(freq_PIT_REF, [row[j] for row in Coef_PIT_REF[i]], linestyle=':', marker=marker3, color='black', markersize=6, label=f"PIT REF dof {j+1}")   
+                plt.plot(freq_PIT_REF, [row[j] for row in Coef_PIT_REF[i]], linestyle=':', marker=marker3, color='black', markersize=5, label=f"OCM dof {j+1}")   
         plt.legend()
         plt.grid(True)
-        plt.savefig(f"{file}_Fex_abs_{d}_B{nom_dof}.png", dpi=300)
+        plt.savefig(f"{file}_Fex_abs_{d}_B{nom_dof}.pdf")
         plt.close()
 
         plt.figure(figsize=(10, 8))
@@ -457,17 +455,15 @@ def Trace_Fex(fileBEM, filePIT, filePIT_phase, filePIT_REF, filePIT_phase_REF, f
             nom_dof=nom_dof+"_"+f"{dof}"
             color = couleurs[k % len(couleurs)]
             marker = markers[k % len(markers)]
-            color2 = couleurs[k+len(num_dof) % len(couleurs)]
-            marker2 = markers[k+len(num_dof) % len(markers)]
-            plt.plot(freq_BEM, Coef_BEM_ph[i][:, j], linestyle='-', marker=marker, color=color, markersize=5, label=f"BEM dof {j+1}")   
-            plt.plot(freq_PIT, [row[j] for row in Phase_PIT[i]], linestyle=':', marker=marker2, color=color2, markersize=4, label=f"PIT dof {j+1}")   
+            plt.plot(freq_BEM, Coef_BEM_ph[i][:, j], linestyle='-', marker="o", color=color, markersize=3, label=f"BEM dof {j+1}")   
+            plt.plot(freq_PIT, [row[j] for row in Phase_PIT[i]], linestyle='--', marker="x", color=color, markersize=6, label=f"STM dof {j+1}")   
             if REF :
                 color3 = couleurs[k+len(num_dof)+1 % len(couleurs)]
                 marker3 = markers[k+len(num_dof)+2 % len(markers)]
-                plt.plot(freq_PIT_REF, [row[j] for row in Phase_PIT_REF[i]], linestyle=':', marker=marker3, color='black', markersize=6, label=f"PIT REF dof {j+1}")   
+                plt.plot(freq_PIT_REF, [row[j] for row in Phase_PIT_REF[i]], linestyle=':', marker=marker3, color='black', markersize=5, label=f"OCM dof {j+1}")   
         plt.legend()
         plt.grid(True)
-        plt.savefig(f"{file}_Fex_phase_{d}_B{nom_dof}.png", dpi=300)
+        plt.savefig(f"{file}_Fex_phase_{d}_B{nom_dof}.pdf")
         plt.close()
     return
 
@@ -550,7 +546,179 @@ def plot_Fex_E(fileBEM, filePIT_REF, filePIT_phase_REF, filesPIT, filesPIT_phase
         plt.close()
     return
 
+def Calcul_GOF(BEMfiles, PITfiles, Nom_data, indices, NOMS, mesh):
+    min_CoF = np.zeros((len(indices), len(PITfiles)))
+    mean_CoF = np.zeros((len(indices), len(PITfiles)))
+    use_nrmse=True
+    for k in range(len(BEMfiles)):
+        frequencies, COEF = read_RAD_PIT(PITfiles[k])
+        frequencies, COEF_REF = read_RAD_BEM(BEMfiles[k])
+        for j, ij in enumerate(indices):
+            diffs_squared = []
+            ref_values = []
+            gof_local = []
+            for i in range(len(frequencies)):
+                if frequencies[i]<4:
+                    value = COEF[i][ij[0] - 1][ij[1] - 1]
+                    value_ref = COEF_REF[i][ij[0] - 1][ij[1] - 1]
 
+                    diff_sq = np.abs(value - value_ref)**2
+                    ref_abs = np.abs(value_ref)
+
+                    diffs_squared.append(diff_sq)
+                    ref_values.append(ref_abs)
+
+                    if not use_nrmse:
+                        gof_i = 100 * (1 - (np.sqrt(diff_sq) / ref_abs))
+                        gof_local.append(gof_i)
+
+            if use_nrmse:
+                mse = np.mean(diffs_squared)
+                rmse = np.sqrt(mse)
+                mean_ref = np.mean(ref_values)
+                nrmse = rmse / mean_ref
+                gof = (1 - nrmse) * 100
+                mean_CoF[j, k] = gof
+            else:
+                gof = np.mean(gof_local)
+
+                min_gof = np.min(gof_local)
+                mean_CoF[j, k] = gof
+                min_CoF[j, k] = min_gof
+            if gof < 90:
+                print(f"mesh={NOMS[k]} - ij={ij} - mean GoF={gof:.2f}% ")
+            if gof < 0:
+                print(f" !!!!!! mesh={NOMS[k]} - ij={ij} - mean GoF={gof:.2f}%")
+                print(f"{len(diffs_squared)} - diffs_squared={diffs_squared}")
+    
+    # Création du graphique
+    for j, ij in enumerate(indices):
+        plt.figure(figsize=(8, 5))
+        bars = plt.bar(NOMS[:], mean_CoF[j,:], color='skyblue', edgecolor='black')
+
+        # Ajouter les valeurs au-dessus des barres
+        for bar in bars:
+            yval = bar.get_height()
+            plt.text(bar.get_x() + bar.get_width()/2, yval + 0.5, f'{yval:.2f}%', ha='center', va='bottom')
+
+        # Mise en forme
+        plt.ylim(0, 105)
+        plt.xlabel('d/a')
+        plt.ylabel(f'mean GoF (%)')
+        if Nom_data=="Damping":
+            plt.title(f'Goodness of Fit - Two Cylinders - {Nom_data} B_{ij[0]}_{ij[1]}')
+        else : 
+            plt.title(f'Goodness of Fit - Two Cylinders - Added Mass A_{ij[0]}_{ij[1]}')
+        plt.grid(axis='y', linestyle='--', alpha=0.7)
+
+        plt.tight_layout()
+        # plt.show()
+        plt.savefig(f"GOF_{mesh}_{Nom_data}_{ij[0]}_{ij[1]}.pdf")
+        plt.close()
+
+def Calcul_GOF_Fex(BEMfiles, PITfilesA, PITfilesP, dof_vect, NOMS, mesh):
+    min_CoF=np.zeros((len(dof_vect), len(PITfilesA)))
+    mean_CoF=np.zeros((len(dof_vect), len(PITfilesA)))
+    min_CoF_ph=np.zeros((len(dof_vect), len(PITfilesP)))
+    mean_CoF_ph=np.zeros((len(dof_vect), len(PITfilesP)))
+    for k in range(len(BEMfiles)) : 
+        beta, frequencies, Coef_abs_REF, Coef_ph_REF = read_Fex_BEM(BEMfiles[k])
+        beta, frequencies, Coef_abs = read_Fex_PIT(PITfilesA[k])
+        beta, frequencies, Coef_ph = read_Fex_PIT(PITfilesP[k])
+        use_nrmse = True  # ⬅️ Change à False pour utiliser la méthode locale
+
+        for j, dof in enumerate(dof_vect):
+            abs_diffs_squared = []
+            abs_refs = []
+            ph_diffs_squared = []
+            ph_refs = []
+
+            gof_local_abs = []
+            gof_local_ph = []
+
+            for i in range(len(frequencies)):
+                # --- Amplitude ---
+                value = Coef_abs[0][i][dof - 1]
+                value_ref = Coef_abs_REF[0][i, dof - 1]
+                diff_sq_abs = np.abs(value - value_ref)**2
+                ref_abs = np.abs(value_ref)
+
+                if frequencies[i]<4:
+                    abs_diffs_squared.append(diff_sq_abs)
+                    abs_refs.append(ref_abs)
+                    if not use_nrmse:
+                        gof_i_abs = 100 * (1 - (np.sqrt(diff_sq_abs) / ref_abs))
+                        gof_local_abs.append(gof_i_abs)
+
+                # --- Phase ---
+                value_ph = Coef_ph[0][i][dof - 1]
+                value_ref_ph = Coef_ph_REF[0][i, dof - 1]
+                diff_sq_ph = np.abs(value_ph - value_ref_ph)**2
+                ref_ph = np.abs(value_ref_ph)
+
+                if frequencies[i]<4:
+                    ph_diffs_squared.append(diff_sq_ph)
+                    ph_refs.append(ref_ph)
+                    if not use_nrmse:
+                        gof_i_ph = 100 * (1 - (np.sqrt(diff_sq_ph) / ref_ph))
+                        gof_local_ph.append(gof_i_ph)
+
+            # --- Amplitude GoF ---
+            if use_nrmse:
+                rmse_abs = np.sqrt(np.mean(abs_diffs_squared))
+                mean_abs_ref = np.mean(abs_refs)
+                nrmse_abs = rmse_abs / mean_abs_ref
+                gof_abs = (1 - nrmse_abs) * 100
+            else:
+                gof_abs = np.mean(gof_local_abs)
+
+            mean_CoF[j, k] = gof_abs
+
+            # --- Phase GoF ---
+            if use_nrmse:
+                rmse_ph = np.sqrt(np.mean(ph_diffs_squared))
+                mean_ph_ref = np.mean(ph_refs)
+                nrmse_ph = rmse_ph / mean_ph_ref
+                gof_ph = (1 - nrmse_ph) * 100
+            else:
+                gof_ph = np.mean(gof_local_ph)
+
+            mean_CoF_ph[j, k] = gof_ph
+
+            # Optionnel : avertissement si GoF < 90%
+            if gof_abs < 90:
+                print(f"dof={dof} - mesh={NOMS[k]} - ABS mean GoF={gof_abs:.2f}%")
+            if gof_ph < 90:
+                print(f"dof={dof} - mesh={NOMS[k]} - PHASE mean GoF={gof_ph:.2f}%")
+    Trace_GOF(mean_CoF, False, NOMS, dof_vect, mesh)
+    Trace_GOF(mean_CoF_ph, True, NOMS, dof_vect, mesh)
+    
+def Trace_GOF(GoF, Phase, NOMS, dof_vect, mesh) :
+    for j, dof in enumerate(dof_vect):
+        plt.figure(figsize=(8, 5))
+        bars = plt.bar(NOMS[:], GoF[j,:], color='skyblue', edgecolor='black')
+
+        # Ajouter les valeurs au-dessus des barres
+        for bar in bars:
+            yval = bar.get_height()
+            plt.text(bar.get_x() + bar.get_width()/2, yval + 0.5, f'{yval:.2f}%', ha='center', va='bottom')
+
+        # Mise en forme
+        plt.ylim(0, 105)
+        plt.xlabel('d/a')
+        plt.ylabel(f'mean GoF (%)')
+        if Phase:
+            data="Fph"
+            plt.title(f'Goodness of Fit - Two Cylinders - Excitation Forces Phase ph(F)_{dof}')
+        else : 
+            data="Fabs"
+            plt.title(f'Goodness of Fit - Two Cylinders - Excitation Forces Amplitude |F|_{dof}')
+        plt.grid(axis='y', linestyle='--', alpha=0.7)
+
+        plt.tight_layout()
+        # plt.show()
+        plt.savefig(f"GOF_{mesh}_{data}_dof{dof}.pdf")
+        plt.close()
 
 #################################################################
 #################################################################
@@ -558,7 +726,7 @@ def plot_Fex_E(fileBEM, filePIT_REF, filePIT_phase_REF, filesPIT, filesPIT_phase
 #################################################################
 #################################################################
 
-param_d=16
+param_d=4
 
 N3 = False
 COMP_E = False
@@ -567,9 +735,10 @@ ERROR_E=False
 
 GRAPHS_beta=False
 
-if N3 : 
-    param_d=1
-    limite=400
+GOF=False
+if N3 or GOF: 
+    param_d=2
+    limite=16
     GRAPHS_N3_F = False
     GRAPHS_N3_C=False
 elif GRAPHS_beta or COMP_E : 
@@ -582,8 +751,9 @@ else :
     GRAPHS_N3_C = True
 
 
-mesh="barge"
-config_a=False
+mesh="CylR3"
+LID=""
+config_a=True
 Nb=2
 layout="X"
 Nw=20
@@ -592,31 +762,41 @@ test="S_"
 # beta_value="beta_180.0_"
 beta_value=""
 PIT_type=f"Nb{Nb}_{layout}_"
-PIT_N3_file=f"PIT3_{mesh}_source"
+# PIT_type=""
+PIT_N3_file=f"PIT3_{mesh}{LID}_source"
 # PIT_N3_file=f"CAP_test"
-PIT_N3_file_REF=f"PIT3_{mesh}"
+PIT_N3_file_REF=f"PIT3_{mesh}{LID}"
 chemin="/home/cassandra/Documents/PFE_MOREnergy/Nemoh_myVersion/"
 chemin_PIT_N3 = f"{chemin}PIT3_E/wec_inputs/{PIT_N3_file}/resultsIT/"
-# chemin_PIT_N3 = f"{chemin}capytaine/MyTestCases/{PIT_N3_file}/resultsIT/"
 chemin_PIT_N3_REF = f"{chemin}PIT3_E/wec_inputs/{PIT_N3_file_REF}/resultsIT/"
 # BEM_file=f"BEM_{mesh}_BETAS"
 # chemin_BEM=f"BEM_{mesh}/BEM_{mesh}_Nb{Nb}_{layout}_"
-chemin_BEM=f"{mesh}/BEM_{mesh}_Nb{Nb}_{layout}/BEM_{mesh}_Nb{Nb}_{layout}_"
-titre=f"{mesh} - Nb={Nb} - {layout}, Nw={Nw}, Nbeta=13, Ndof=6, Ndir={Ndir}"
-
+# chemin_BEM=f"{mesh}{LID}/BEM_{mesh}_Nb{Nb}_{layout}/BEM_{mesh}_Nb{Nb}_{layout}_"
+chemin_BEM=f"{mesh}{LID}/BEM_{mesh}_Nb{Nb}_{layout}_"
+# titre=f"{mesh} - Nb={Nb} - {layout}, Nw={Nw}, Nbeta=13, Ndof=6, Ndir={Ndir}"
+titre = "Four Cylinders"
 if GRAPHS_beta : 
     Ndir=5
     beta_value=f"multi_beta_{Ndir}_"
     PIT_type=""
 
+
+BEM_A=[]
+BEM_B=[]
+BEM_F=[]
+PIT_A=[]
+PIT_B=[]
+PIT_Fa=[]
+PIT_Fp=[]
+NOMS=[]
 while param_d<=limite : 
     if config_a : 
         distance=f"da{param_d}"  
-        titre=f"{titre}, d={param_d*5}m"
+        titre=f"{titre} - d/a={param_d}"
     else :
         distance=f"d{param_d}"  
-        titre=f"{titre}, d={param_d}m"
-    BEM_file=f"{chemin_BEM}{distance}"
+        titre=f"{titre}, d=a+Rc={param_d}m"
+    BEM_file=f"{chemin_BEM}da{param_d}"
     CM_BEM = f"{chemin}PFE_Nemoh/MyTestCases/{BEM_file}/results/CM.dat"
     CM_PIT_N3 = f"{chemin_PIT_N3}Global_{test}Madd_{PIT_type}{beta_value}{distance}.00.dat"
     CM_PIT_N3_REF = f"{chemin_PIT_N3_REF}Global_Madd_{PIT_type}{beta_value}{distance}.00.dat"
@@ -630,7 +810,15 @@ while param_d<=limite :
     Fex_PIT_N3_REF = f"{chemin_PIT_N3_REF}Global_Fe_abs_{PIT_type}{beta_value}{distance}.00.dat"
     Fex_phase_PIT_N3 = f"{chemin_PIT_N3}Global_{test}Fe_phase_{PIT_type}{beta_value}{distance}.00.dat"
     Fex_phase_PIT_N3_REF = f"{chemin_PIT_N3_REF}Global_Fe_phase_{PIT_type}{beta_value}{distance}.00.dat"
-
+    if GOF : 
+        BEM_A.append(CM_BEM)
+        BEM_B.append(CA_BEM)
+        BEM_F.append(Fex_BEM)
+        PIT_A.append(CM_PIT_N3)
+        PIT_B.append(CA_PIT_N3)
+        PIT_Fa.append(Fex_PIT_N3)
+        PIT_Fp.append(Fex_phase_PIT_N3)
+        NOMS.append(f"d/a={param_d}")
     if N3 : 
         print("\n ------------Distance=", param_d, "-----------------")
         with open(f"EcartsRelatifs_{test}Nb{Nb}_{layout}.dat", "a") as f:
@@ -644,25 +832,35 @@ while param_d<=limite :
             f.write(f"{L_inf_error_ph:16.8f}      {L2_error_ph:16.8f}\n")
 
     if GRAPHS_N3_F :
-        for ind, i in enumerate([[1], [3]]) :
+        for ind, i in enumerate([[1, 7], [3, 9], [5,11]]) :
             print("dof", i)
-            Trace_Fex(Fex_BEM, Fex_PIT_N3, Fex_phase_PIT_N3, Fex_PIT_N3_REF, Fex_phase_PIT_N3_REF, f"N3_{test}Nb{Nb}_{layout}", i, False, titre, distance)
+            Trace_Fex(Fex_BEM, Fex_PIT_N3, Fex_phase_PIT_N3, Fex_PIT_N3_REF, Fex_phase_PIT_N3_REF, f"N_{mesh}_{test}Nb{Nb}_{layout}", i, False, titre, distance)
     if GRAPHS_N3_C : 
         # indices=[(5,5), (11,11), (5,11), (3,9), (3,5), (3,11), (5,9), (9,11)]
-        # indices=[[(3,9)], [(1, 1),(3,3)], [(5,5)], [(5,11)], [(1, 7)]]
-        indices=[[(1, 1)], [(3, 3)], [(3,9)]]
+        # indices=[[(1, 7)], [(3, 9), (3, 15), (3, 21)], [(5,11), (5, 17), (5, 23)]]
+        indices=[[(1, 1)], [(1, 7)], [(3, 3)], [(3,9)], [(5, 5)], [(5,11)]]
         for ij in indices : 
             print("indice", ij)
-            Trace_RAD(CA_BEM, CA_PIT_N3, CA_PIT_N3_REF, f"N3_{test}Nb{Nb}_{layout}", "Damping", ij, titre, distance)
-            Trace_RAD(CM_BEM, CM_PIT_N3, CM_PIT_N3_REF, f"N3_{test}Nb{Nb}_{layout}", "Added_Mass", ij, titre, distance)
+            Trace_RAD(CA_BEM, CA_PIT_N3, CA_PIT_N3_REF, f"N_{mesh}_{test}Nb{Nb}_{layout}", "Damping", ij, titre, distance)
+            Trace_RAD(CM_BEM, CM_PIT_N3, CM_PIT_N3_REF, f"N_{mesh}_{test}Nb{Nb}_{layout}", "Added_Mass", ij, titre, distance)
     if GRAPHS_beta : 
         for ind, i in enumerate([[3],[9], [5],[11], [1],[7]])  :
             print("dof", i)
-            Trace_Fex(Fex_BEM, Fex_PIT_N3, Fex_phase_PIT_N3, Fex_PIT_N3_REF, Fex_phase_PIT_N3_REF, f"N3_{test}Nb{Nb}_{layout}", i, True, titre, distance)
+            Trace_Fex(Fex_BEM, Fex_PIT_N3, Fex_phase_PIT_N3, Fex_PIT_N3_REF, Fex_phase_PIT_N3_REF, f"N_{mesh}_{test}Nb{Nb}_{layout}", i, True, titre, distance)
             
     param_d=param_d*2
 
-
+if GOF : 
+    dof=[1, 3, 5, 7, 9, 11]
+    indices=[[1,7],[3,9],[5,11]]
+    print(f"------------GoF -> {NOMS}")
+    print("Added Mass")
+    Calcul_GOF(BEM_A, PIT_A, "Added_Mass", indices, NOMS, mesh)
+    print("Damping")
+    Calcul_GOF(BEM_B, PIT_B, "Damping", indices, NOMS, mesh)
+    print("Fex")
+    Calcul_GOF_Fex(BEM_F, PIT_Fa, PIT_Fp, dof, NOMS, mesh)
+    
 #################################################################
 #################################################################
 ################### EVANESCENT PROBLEM ########################

@@ -326,30 +326,34 @@ def Trace_RAD(fileBEM, filePIT, filePIT_REF, file, nom, indice, titre, distances
     for ind in range(len(fileBEM)) : 
         freq_BEM, Coef_BEM_w = read_RAD_PIT(fileBEM[ind])
         freq_PIT, Coef_PIT_w = read_RAD_PIT(filePIT[ind])
-        Coef_BEM.append(Coef_BEM_w[i_w])
-        Coef_PIT.append(Coef_PIT_w[i_w])
+        Coef_BEM.append(np.atleast_2d(Coef_BEM_w[i_w]))
+       	Coef_PIT.append(np.atleast_2d(Coef_PIT_w[i_w]))
+
         REF=False
         if filePIT_REF != filePIT :
             freq_PIT_REF, Coef_PIT_REF_w = read_RAD_PIT(filePIT_REF[ind])
             REF=True
-            Coef_PIT_REF.append(Coef_PIT_REF_w[i_w])
+            # Coef_PIT_REF.append(Coef_PIT_REF_w[i_w])
+            Coef_PIT_REF.append(np.atleast_2d(Coef_PIT_REF_w[i_w]))
     freq=freq_BEM[i_w]
     couleurs = ['b', 'g', 'r', 'gold', 'lime', 'c', 'm', 'y', 'k']  # palette de couleurs (réutilisée si plus de 7 courbes)
     markers = ['s', 'o', '<', '^','x', '+', '*']
     AD=False
     if AD :
-        data=np.loadtxt("Data_waves.dat", delimiter=None, skiprows=1) 
-        a=5
+        # data=np.loadtxt("Data_waves.dat", delimiter=None, skiprows=1) 
+        cheminMN="/home/cassandra/Documents/PFE_MOREnergy/Nemoh_myVersion/PIT3_E/A39_L10a"
+        dataMN=np.loadtxt(f"{cheminMN}/L0.dat") 
+        a=3
         rho=1000
         h=2*a
-        norm=rho*np.pi*a**2*h/3
+        norm=rho*np.pi*a**2*h
         if nom=="Damping":
             norm=norm*np.array(freq_BEM)
             unit="/(ρπa²hw)"
         else :
             unit="/(ρπa²h)"
         bis="AD_"
-        axeX="ka (a=5m)"
+        axeX="d/a"
         if np.isscalar(norm):
             norm_array = np.full_like(freq_BEM, norm, dtype=float)
         else:
@@ -367,8 +371,8 @@ def Trace_RAD(fileBEM, filePIT, filePIT_REF, file, nom, indice, titre, distances
     plt.xlabel(f"{axeX}")
     plt.ylabel(f"{nom} {unit}")
     plt.grid(True)
-    plt.xscale("log", base=2) 
-
+    # plt.xscale("log", base=2) 
+    
     for k, ij in enumerate(indice): 
         i=ij[0]-1
         j=ij[1]-1
@@ -377,15 +381,18 @@ def Trace_RAD(fileBEM, filePIT, filePIT_REF, file, nom, indice, titre, distances
         color2 = couleurs[k+len(indice) % len(couleurs)]
         marker2 = markers[k+len(indice) % len(markers)]
         if AD :
-            plt.plot(a*data[:,1], [mat[i][j]/ norm_array[c] for c, mat in enumerate(Coef_BEM)], linestyle='-', marker=marker, color=color, markersize=5, label=f"BEM {ij[0]}_{ij[1]}")
-            plt.plot(a*data[:,1], [mat[i][j]/ norm_array[c] for c, mat in enumerate(Coef_PIT)], linestyle=':', marker=marker2, color=color2, markersize=5, label=f"PIT {ij[0]}_{ij[1]}")
+            plt.plot(distances, [mat[i][j]/ norm_array[0] for c, mat in enumerate(Coef_BEM)], linestyle='-', marker='o', color='b', markersize=2, label=f"BEM {ij[0]}_{ij[1]}")
+            plt.plot(dataMN[:,0], dataMN[:,1], linestyle='-', marker='', color='black', label=f"ITM McNatt {ij[0]}_{ij[1]}")
+            if REF :
+            	marker3 = markers[k+len(indice)+2 % len(markers)]
+            	plt.plot(distances, [mat[i][j]/ norm_array[0] for c, mat in enumerate(Coef_PIT_REF)], linestyle='--', marker='x', color='b', markersize=5, label=f"ITM Outer Cylinder {ij[0]}_{ij[1]}")
+            plt.plot(distances, [mat[i][j]/ norm_array[0] for c, mat in enumerate(Coef_PIT)], linestyle=':', marker='^', color='b', markersize=5, label=f"ITM Source Terms {ij[0]}_{ij[1]}")
         else :
             plt.plot(distances, [mat[i][j] for mat in Coef_BEM], linestyle='-', marker=marker, color=color, markersize=5, label=f"CAP BEM {ij[0]}_{ij[1]}")
             plt.plot(distances, [mat[i][j] for mat in Coef_PIT], linestyle=':', marker=marker2, color=color2, markersize=5, label=f"CAP IT {ij[0]}_{ij[1]}")
-        
-        if REF :
-            marker3 = markers[k+len(indice)+2 % len(markers)]
-            plt.plot(distances, [mat[i][j] for mat in Coef_PIT_REF], linestyle=':', marker=marker3, color='black', markersize=6, label=f"Nemoh IT Outer Cylinder {ij[0]}_{ij[1]}")
+            if REF :
+            	marker3 = markers[k+len(indice)+2 % len(markers)]
+            	plt.plot(distances, [mat[i][j] for mat in Coef_PIT_REF], linestyle=':', marker=marker3, color='black', markersize=6, label=f"CAP IT Outer Cylinder {ij[0]}_{ij[1]}")
     plt.legend(loc='best', fontsize='small', frameon=True)
     plt.savefig(f"{file}_{bis}{nom}_w{i_w+1}_M{indice}.png", dpi=300)
     plt.close()
@@ -507,6 +514,34 @@ def Trace_Fex(fileBEM, fileBEM_phase, filePIT, filePIT_phase, filePIT_REF, fileP
         plt.savefig(f"{file}_Fex_phase_w{i_w+1}_B{nom_dof}.png", dpi=300)
         plt.close()
     return
+    
+import glob
+import os
+import numpy as np
+
+def read_L_files(path="."):
+    """
+    Lit les fichiers L*.dat présents dans 'path'
+    et retourne un dictionnaire :
+      data["L0"]  = numpy.array avec 2 colonnes (x, y)
+      data["L30"] = ...
+    """
+    data = {}
+    
+    # Cherche tous les fichiers L*.dat
+    files = glob.glob(os.path.join(path, "L*.dat"))
+    
+    for f in files:
+        fname = os.path.basename(f)   # ex: L30.dat
+        key = fname.replace(".dat", "")  # ex: "L30"
+        
+        # Lecture des données
+        arr = np.loadtxt(f)
+        
+        data[key] = arr
+    
+    return data
+    
 def plot_RAD_E(fileBEM, filePIT, filePIT_E, file, nom, indice, titre, distances, Ne, i_w):
     Coef_BEM=[]
     Coef_PIT=[]
@@ -519,15 +554,32 @@ def plot_RAD_E(fileBEM, filePIT, filePIT_E, file, nom, indice, titre, distances,
         for e in range(len(filePIT_E)) :
             freq_PIT_REF, Coef_PIT_REF_w = read_RAD_PIT(filePIT_E[e][ind])
             Coef_PIT_REF[e].append(Coef_PIT_REF_w[i_w])
+            # Coef_PIT_REF[e].append(np.atleast_2d(Coef_PIT_REF_w[i_w]))
     freq=freq_BEM[i_w]
     couleurs = ['g', 'r', 'gold', 'lime', 'c', 'm', 'y', 'k']  # palette de couleurs (réutilisée si plus de 7 courbes)
     markers = ['<', '^','x', '+', '*']
-  
-    if nom=="Damping":
-        unit="(kg/s)"
+    AD=False
+    if AD :
+        # data=np.loadtxt("Data_waves.dat", delimiter=None, skiprows=1) 
+        cheminMN="/home/cassandra/Documents/PFE_MOREnergy/Nemoh_myVersion/PIT3_E/A39_L10a/"
+        dataMN=read_L_files(f"{cheminMN}") 
+        print(dataMN.keys())
+        a=3
+        rho=1000
+        h=2*a
+        norm=rho*np.pi*a**2*h
+        if nom=="Damping":
+            norm=norm*np.array(freq_BEM)
+            unit="/(ρπa²hw)"
+        else :
+            unit="/(ρπa²h)"
     else :
-        unit="(kg)"
-
+        norm=1
+        if nom=="Damping":
+            unit="(kg/s)"
+        else :
+            unit="(kg)"
+	
     for k, ij in enumerate(indice):
         plt.figure(figsize=(8, 6))
         plt.xlabel("d/a")
@@ -537,12 +589,15 @@ def plot_RAD_E(fileBEM, filePIT, filePIT_E, file, nom, indice, titre, distances,
         j=ij[1]-1
         # plt.xscale("log", base=2) 
         plt.title(titre +f", w={freq} rad/s, Coefficient {ij[0]}_{ij[1]}")
-        plt.plot(distances, [mat[i][j] for mat in Coef_BEM], linestyle='--', marker='s', color='b', markersize=5, label=f"CAP BEM")
-        plt.plot(distances, [mat[i][j] for mat in Coef_PIT], linestyle='--', marker='o', color='black', markersize=5, label=f"CAP IT L=0")
+        plt.plot(distances, [mat[i][j]/norm for mat in Coef_BEM], linestyle='-', marker='o', color='b', markersize=3, label=f"CAP BEM")
+        # plt.plot(dataMN["L0"][:,0], dataMN["L0"][:,1], linestyle='-', marker='', color='black', label=f"Flavia ITM L=0")
+        plt.plot(distances, [mat[i][j]/norm for mat in Coef_PIT], linestyle='--', marker='^', color='black', markersize=5, label=f"CAP ITM L=0")
         for e in range(len(filePIT_E)) :
             marker = markers[e % len(markers)]
             color = couleurs[e % len(couleurs)]
-            plt.plot(distances, [mat[i][j] for mat in Coef_PIT_REF[e]], linestyle=':', marker=marker, color=color, markersize=4, label=f"CAP IT L={Ne[e]}")
+            valL=f"L{Ne[e]}"
+            # plt.plot(dataMN[valL][:,0], dataMN[valL][:,1], linestyle='--', marker='', color=color, label=f"Flavia ITM L={Ne[e]}")
+            plt.plot(distances, [mat[i][j]/norm for mat in Coef_PIT_REF[e]], linestyle=':', marker='x', color=color, markersize=4, label=f"CAP ITM L={Ne[e]}")
         plt.legend(loc='best', fontsize='small', frameon=True)
         plt.savefig(f"{file}_{nom}_w{i_w+1}_M{ij}.png", dpi=300)
         plt.close()
@@ -575,12 +630,12 @@ def plot_Fex_E(fileBEM, filePIT, filePIT_E, file, num_dof, titre, distances, Ne,
         plt.xlabel("d/a")
         plt.ylabel("|Fex| (N)")
         # plt.xscale("log", base=2) 
-        plt.plot(distances, Coef_BEM[:,i, j], linestyle='--', marker='s', color='b', markersize=5, label=f"CAP BEM")   
-        plt.plot(distances, Coef_PIT[:,i, j], linestyle='--', marker='o', color='black', markersize=5, label=f" CAP IT L=0")   
+        plt.plot(distances, Coef_BEM[:,i, j], linestyle='-', marker='o', color='b', markersize=3, label=f"CAP BEM")   
+        plt.plot(distances, Coef_PIT[:,i, j], linestyle='--', marker='^', color='black', markersize=5, label=f" CAP IT L=0")   
         for e in range(len(filePIT_E)) :
             marker = markers[e % len(markers)]
             color = couleurs[e % len(couleurs)]
-            plt.plot(distances, Coef_PIT_E[e][:,i, j], linestyle=':', marker=marker, color=color, markersize=4, label=f"CAP PIT L={Ne[e]}")   
+            plt.plot(distances, Coef_PIT_E[e][:,i, j], linestyle=':', marker='x', color=color, markersize=4, label=f"CAP PIT L={Ne[e]}")   
         plt.legend()
         plt.grid(True)
         plt.savefig(f"{file}_w{i_w+1}_B{dof}.png", dpi=300)
@@ -781,16 +836,17 @@ test="S_"
 # beta_value="beta_180.0_"
 beta_value=""
 PIT_type=f"Nb{Nb}_{layout}_"
-PIT_N3_file=f"PIT3_{mesh}_source"
-PIT_N3_file_REF=f"PIT3_{mesh}"
+PIT_N3_file=f"PIT3_{mesh}_L10a_source"
+PIT_N3_file_REF=f"PIT3_{mesh}_L10a"
 chemin="/home/cassandra/Documents/PFE_MOREnergy/Nemoh_myVersion/"
 chemin_PIT_N3 = f"{chemin}PIT3_E/wec_inputs/{PIT_N3_file}/resultsIT/"
 chemin_PIT_N3_REF = f"{chemin}PIT3_E/wec_inputs/{PIT_N3_file_REF}/resultsIT/"
 # BEM_file=f"BEM_{mesh}_BETAS"
-chemin_CAP=f"{chemin}capytaine/MyTestCases/CAP_{mesh}_h12/resultsIT/"
-chemin_CAP_BEM=f"{chemin}capytaine/MyTestCases/C_BEM_{mesh}_h12/resultsBEM/Nb{Nb}_{layout}"
-titre=f"{mesh} - Nb={Nb} - {layout}, Nw={Nw}, Nbeta=13, Ndof=6, Ndir={Ndir}"
-
+chemin_CAP=f"{chemin}capytaine/MyTestCases/CAP_{mesh}_source_test/resultsIT/"
+chemin_CAP_OC=f"{chemin}capytaine/MyTestCases/CAP_{mesh}_test/resultsIT/"
+chemin_CAP_BEM=f"{chemin}capytaine/MyTestCases/C_BEM_{mesh}_test/resultsBEM/Nb{Nb}_{layout}"
+# titre=f"{mesh} - Nb={Nb} - {layout}, Nw={Nw}, Nbeta=13, Ndof=6, Ndir={Ndir}"
+titre="Two Cylinders"
 
 CM_BEM=[]
 CM_PIT_N3=[]
@@ -813,19 +869,22 @@ while param_d<=limite :
     BEM_file=f"{chemin_CAP_BEM}_da{param_d}/"
     CM_BEM_d = f"{BEM_file}Capytaine_Madd.dat"
     CM_PIT_N3_d = f"{chemin_CAP}CapytaineIT_{test}Madd_{PIT_type}{beta_value}{distance}.00.dat"
-    CM_PIT_N3_REF_d = f"{chemin_PIT_N3_REF}Global_Madd_{PIT_type}{beta_value}{distance}.00.dat"
+    CM_PIT_N3_REF_d = f"{chemin_CAP_OC}CapytaineIT_Madd_{PIT_type}{beta_value}{distance}.00.dat"
+    # CM_PIT_N3_REF_d = f"{chemin_PIT_N3_REF}Global_Madd_{PIT_type}{beta_value}{distance}.00.dat"
 
     CA_BEM_d = f"{BEM_file}Capytaine_Crad.dat"
     CA_PIT_N3_d = f"{chemin_CAP}CapytaineIT_{test}Crad_{PIT_type}{beta_value}{distance}.00.dat"
-    CA_PIT_N3_REF_d = f"{chemin_PIT_N3_REF}Global_Crad_{PIT_type}{beta_value}{distance}.00.dat"
+    CA_PIT_N3_REF_d = f"{chemin_CAP_OC}CapytaineIT_Crad_{PIT_type}{beta_value}{distance}.00.dat"
+    # CA_PIT_N3_REF_d = f"{chemin_PIT_N3_REF}Global_Crad_{PIT_type}{beta_value}{distance}.00.dat"
 
     Fex_BEM_d = f"{BEM_file}Capytaine_Fe_abs.dat"  
     Fex_BEM_phase_d = f"{BEM_file}Capytaine_Fe_phase.dat"  
     Fex_PIT_N3_d = f"{chemin_CAP}CapytaineIT_{test}Fe_abs_{PIT_type}{beta_value}{distance}.00.dat"
-    Fex_PIT_N3_REF_d = f"{chemin_PIT_N3_REF}Global_Fe_abs_{PIT_type}{beta_value}{distance}.00.dat"
+    Fex_PIT_N3_REF_d = f"{chemin_CAP_OC}CapytaineIT_Fe_abs_{PIT_type}{beta_value}{distance}.00.dat"
+    # Fex_PIT_N3_REF_d = f"{chemin_PIT_N3_REF}Global_Fe_abs_{PIT_type}{beta_value}{distance}.00.dat"
     Fex_phase_PIT_N3_d = f"{chemin_CAP}CapytaineIT_{test}Fe_phase_{PIT_type}{beta_value}{distance}.00.dat"
-    Fex_phase_PIT_N3_REF_d = f"{chemin_PIT_N3_REF}Global_Fe_phase_{PIT_type}{beta_value}{distance}.00.dat"
-
+    Fex_phase_PIT_N3_REF_d = f"{chemin_CAP_OC}CapytaineIT_Fe_phase_{PIT_type}{beta_value}{distance}.00.dat"
+    # Fex_phase_PIT_N3_REF_d = f"{chemin_PIT_N3_REF}Global_Fe_phase_{PIT_type}{beta_value}{distance}.00.dat"
     CM_BEM.append(CM_BEM_d) 
     CM_PIT_N3.append(CM_PIT_N3_d) 
     CM_PIT_N3_REF.append(CM_PIT_N3_REF_d) 
@@ -841,7 +900,7 @@ while param_d<=limite :
     vect_distance.append(param_d) 
     param_d=param_d+1
 
-indices_w=[3]
+indices_w=[0]
 if not COMP_E : 
     for i_w in indices_w : 
         print("i_w : ", i_w)
@@ -851,6 +910,7 @@ if not COMP_E :
                 Trace_Fex(Fex_BEM, Fex_BEM_phase, Fex_PIT_N3, Fex_phase_PIT_N3, Fex_PIT_N3_REF, Fex_phase_PIT_N3_REF, f"C_D_{test}Nb{Nb}_{layout}", i, False, titre, vect_distance, i_w)
         if GRAPHS_RAD : 
             indices=[[(1, 7)], [(3,9)], [(5,11)]]
+            # indices=[[(3,9)]]
             for ij in indices : 
                 print("indice", ij)
                 Trace_RAD(CA_BEM, CA_PIT_N3, CA_PIT_N3_REF, f"C_D_{test}Nb{Nb}_{layout}", "Damping", ij, titre, vect_distance, i_w)
@@ -864,7 +924,8 @@ if not COMP_E :
 #################################################################
 Ne=[1, 6]
 DOF=[1, 3, 5]
-indice=[(1, 1), (3,9), (1,7), (5,11)]
+indice=[(3,9), (1,7), (5,11)]
+# indice=[(3,9)]
 CA_IT_files=[]
 CM_IT_files=[]
 Fex_IT_files=[]
@@ -886,19 +947,19 @@ if COMP_E :
             PIT_files_CA.append(CA_PIT_E) 
             PIT_files_Fex.append(Fex_PIT_E) 
             PIT_files_Fex_ph.append(Fex_phase_PIT_E) 
-        CA_IT_files.append(PIT_files_CM)
-        CM_IT_files.append(PIT_files_CA)
+        CM_IT_files.append(PIT_files_CM)
+        CA_IT_files.append(PIT_files_CA)
         Fex_IT_files.append(PIT_files_Fex)
         Fex_ph_IT_files.append(PIT_files_Fex_ph)
 
-    indices_w=[3]
+    indices_w=[1]
     for i_w in indices_w : 
         print("i_w : ", i_w)
         if GRAPHS_RAD : 
             print("\n indice=", indice )
-            plot_RAD_E(CM_BEM, CA_PIT_N3, CA_IT_files, f"C_E_D_{test}Nb{Nb}_{layout}", "Added_Mass", indice, titre, vect_distance, Ne, i_w)
-            plot_RAD_E(CA_BEM, CM_PIT_N3, CM_IT_files, f"C_E_D_{test}Nb{Nb}_{layout}", "Damping", indice, titre, vect_distance, Ne, i_w)
+            plot_RAD_E(CM_BEM, CM_PIT_N3_REF, CM_IT_files, f"C_E_D_{test}Nb{Nb}_{layout}", "Added_Mass", indice, titre, vect_distance, Ne, i_w)
+            plot_RAD_E(CA_BEM, CA_PIT_N3_REF, CA_IT_files, f"C_E_D_{test}Nb{Nb}_{layout}", "Damping", indice, titre, vect_distance, Ne, i_w)
         if GRAPHS_Fex :
             print("\n DOF=", DOF )
-            plot_Fex_E(Fex_BEM, Fex_PIT_N3, Fex_IT_files, f"C_E_D_{test}Nb{Nb}_{layout}_Fex_abs", DOF, titre, vect_distance, Ne, i_w)
-            plot_Fex_E(Fex_BEM_phase, Fex_phase_PIT_N3,Fex_ph_IT_files, f"C_E_D_{test}Nb{Nb}_{layout}_Fex_ph", DOF, titre, vect_distance, Ne, i_w)
+            plot_Fex_E(Fex_BEM, Fex_PIT_N3_REF, Fex_IT_files, f"C_E_D_{test}Nb{Nb}_{layout}_Fex_abs", DOF, titre, vect_distance, Ne, i_w)
+            plot_Fex_E(Fex_BEM_phase, Fex_phase_PIT_N3_REF,Fex_ph_IT_files, f"C_E_D_{test}Nb{Nb}_{layout}_Fex_ph", DOF, titre, vect_distance, Ne, i_w)

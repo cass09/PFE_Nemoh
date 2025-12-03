@@ -333,11 +333,16 @@ def Trace_RAD(filePIT, fileCapytaine, filePIT_REF, file, nom, indice, titre, com
         unit="(kg/s)"
     else :
         unit="(kg)"
-
+    rho=1000
+    g=9.81
+    a=3
+    # AD=(rho*g*np.pi*a**2*(2*a))/(g/a)**(0.5)
+    AD=1
     plt.figure(figsize=(8, 6))
     plt.title(titre)
     plt.xlabel(f"{axeX}")
     plt.ylabel(f"{nom} {unit}")
+    # plt.ylabel(f"{nom} normalized (-)")
     plt.grid(True)
 
     for k, ij in enumerate(indice): 
@@ -350,10 +355,10 @@ def Trace_RAD(filePIT, fileCapytaine, filePIT_REF, file, nom, indice, titre, com
         if REF :
             color3 = couleurs[k+len(indice)+1 % len(couleurs)]
             marker3 = markers[k+len(indice)+2 % len(markers)]
-            plt.plot(freq_PIT_REF, [mat[i][j] for mat in Coef_PIT_REF], linestyle='-', marker=marker3, color=color3, markersize=5, label=f"Outer Cylinder Method {ij[0]}_{ij[1]}")
+            plt.plot(freq_PIT_REF, [mat[i][j]/AD for mat in Coef_PIT_REF], linestyle='-', marker=marker3, color=color3, markersize=5, label=f"Outer Cylinder Method {ij[0]}_{ij[1]}")
    
-        plt.plot(spectre, [mat[i][j] for c, mat in enumerate(Coef_PIT)], linestyle=':', marker=marker, color=color, markersize=5, label=f"{comp} with Nemoh {ij[0]}_{ij[1]}")
-        plt.plot(spectre, [mat[i][j] for c, mat in enumerate(Coef_Capytaine)], linestyle=':', marker=marker2, color=color2, markersize=4, label=f"{comp} with Capytaine {ij[0]}_{ij[1]}")
+        plt.plot(spectre, [mat[i][j]/AD for c, mat in enumerate(Coef_PIT)], linestyle=':', marker=marker, color=color, markersize=5, label=f"{comp} with Nemoh {ij[0]}_{ij[1]}")
+        plt.plot(spectre, [mat[i][j]/AD for c, mat in enumerate(Coef_Capytaine)], linestyle=':', marker=marker2, color=color2, markersize=4, label=f"{comp} with Capytaine {ij[0]}_{ij[1]}")
         plt.legend(loc='best', fontsize='small', frameon=True)
     plt.savefig(f"{file}_{nom}_M{indice}.png", dpi=300)
     plt.close()
@@ -467,33 +472,48 @@ if GRAPHS_beta or N3 :
     GRAPHS_N3_C=False
 else : 
     GRAPHS_N3_F = True
-    GRAPHS_N3_C = False
+    GRAPHS_N3_C = True
 
-distance=16
-mesh="barge"
+distance=1
+mesh="BargeX6"
+LID=""
 config_a=False
 Nb=1
 layout=f"Nb{Nb}_X"
 Nw=20
-Nbeta=13
+Nbeta=11
+depth="_h12"
 test=""
 beta_value=""
 Capytaine_type=f""
 chemin="/home/cassandra/Documents/PFE_MOREnergy/Nemoh_myVersion/"
-
+type="BEM"
 if Nb==1 : 
-    titre=f"{mesh} - Nb={Nb}, Nw={Nw}, Ndof=6, Nbeta={Nbeta}"
-    comp="Source Terms Method"
-    chemin_Capytaine = f"{chemin}capytaine/MyTestCases/CAP_{mesh}/resultsBEM/"
-    chemin_PIT=f"{chemin}PIT3_E/wec_inputs/PIT3_{mesh}_source/results/"
-    chemin_PIT_REF=chemin_PIT
-    # chemin_PIT_REF=f"{chemin}PIT3_E/wec_inputs/PIT3_{mesh}/results/"
+    # titre=f"{mesh} - Nb={Nb}, Nw={Nw}, Ndof=6, Nbeta={Nbeta}"
+    titre=f"BEM Comparison - Barge - Nb={Nb}"
+    if type=="S":
+        comp="Source Terms Method"
+        chemin_Capytaine = f"{chemin}capytaine/MyTestCases/CAP_{mesh}{depth}/resultsBEM/"
+        chemin_PIT=f"{chemin}PIT3_E/wec_inputs/PIT3_{mesh}{depth}_source/results/"
+        chemin_PIT_REF=f"{chemin}PIT3_E/wec_inputs/PIT3_{mesh}{depth}/results/"
+    elif type=='BEM':
+        comp="BEM"
+        chemin_Capytaine = f"{chemin}capytaine/MyTestCases/C_BEM_{mesh}_Nb1/resultsBEM/Nb1_d0/"
+        chemin_PIT=f"{chemin}PFE_Nemoh/MyTestCases/BEM_{mesh}_Nb1/results/"
+        chemin_PIT_REF=chemin_PIT
+    elif type=="OC":
+        comp="Outer Cylinder Method"
+        chemin_Capytaine = f"{chemin}capytaine/MyTestCases/CAP_{mesh}_OC/resultsBEM/"
+        chemin_PIT=f"{chemin}PIT3_E/wec_inputs/PIT3_{mesh}{depth}/results/"
+        chemin_PIT_REF=chemin_PIT
 else : 
     titre=f"{mesh} - Nb={Nb}, Nw={Nw}, Ndof=6, Ndir=1, d={distance}m"
     comp="BEM"
     chemin_Capytaine = f"{chemin}capytaine/MyTestCases/C_BEM_{mesh}/resultsBEM/{layout}_d{distance}/"
     chemin_PIT=f"{chemin}PFE_Nemoh/MyTestCases/{mesh}/BEM_{mesh}_{layout}/BEM_{mesh}_{layout}_d{distance}/results/"
+    # chemin_PIT=f"{chemin}PFE_Nemoh/MyTestCases/BEM_{mesh}_SYM_{layout}_d{distance}/results/"
     chemin_PIT_REF=chemin_PIT
+    # chemin_PIT_REF=f"{chemin}PFE_Nemoh/MyTestCases/BEM_{mesh}_{layout}_d{distance}/results/"
    
 CM_PIT = f"{chemin_PIT}CM.dat"
 CM_Capytaine_N3 = f"{chemin_Capytaine}Capytaine_Madd.dat"
@@ -519,20 +539,20 @@ if N3 :
         f.write(f"{L_inf_error_ph:16.8f}      {L2_error_ph:16.8f}\n")
 
 if GRAPHS_N3_F :
-    for ind, i in enumerate([[1]]) :
+    for ind, i in enumerate([[1], [3], [5]]) :
         print("dof", i)
-        Trace_Fex(Fex_PIT, Fex_Capytaine_N3, Fex_phase_Capytaine_N3, Fex_PIT_REF, f"BEM_Nb{Nb}", i, False, titre, comp)
+        Trace_Fex(Fex_PIT, Fex_Capytaine_N3, Fex_phase_Capytaine_N3, Fex_PIT_REF, f"BEM_{mesh}_Nb{Nb}", i, False, titre, comp)
 if GRAPHS_N3_C : 
     # indices=[(5,5), (11,11), (5,11), (3,9), (3,5), (3,11), (5,9), (9,11)]
     # indices=[[(3,9)], [(1, 1),(3,3)], [(5,5)], [(5,11)], [(1, 7)]]
-    indices=[[(1, 1)], [(1,3)], [(3,3)]]
+    indices=[[(1, 1)], [(3,3)], [(5,5)], [(1,5)]]
     for ij in indices : 
         print("indice", ij)
-        Trace_RAD(CA_PIT, CA_Capytaine_N3, CA_PIT_REF, f"BEM_Nb{Nb}", "Damping", ij, titre, comp)
-        Trace_RAD(CM_PIT, CM_Capytaine_N3, CM_PIT_REF, f"BEM_Nb{Nb}", "Added_Mass", ij, titre, comp)
+        Trace_RAD(CA_PIT, CA_Capytaine_N3, CA_PIT_REF, f"BEM_{mesh}_Nb{Nb}", "Damping", ij, titre, comp)
+        Trace_RAD(CM_PIT, CM_Capytaine_N3, CM_PIT_REF, f"BEM_{mesh}_Nb{Nb}", "Added_Mass", ij, titre, comp)
 if GRAPHS_beta : 
     for ind, i in enumerate([[3],[9], [5],[11], [1],[7]])  :
         print("dof", i)
-        Trace_Fex(Fex_PIT, Fex_Capytaine_N3, Fex_phase_Capytaine_N3, Fex_PIT_REF, f"BEM_Nb{Nb}", i, True, titre, comp)
+        Trace_Fex(Fex_PIT, Fex_Capytaine_N3, Fex_phase_Capytaine_N3, Fex_PIT_REF, f"BEM_{mesh}_Nb{Nb}", i, True, titre, comp)
             
 

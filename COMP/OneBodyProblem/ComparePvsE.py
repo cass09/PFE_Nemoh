@@ -34,7 +34,7 @@ def CompareResultsE(file, Nw, Ne) :
 
 def Ratio_E(file, type, Nw, Ne) : 
     dof=6
-    Nbeta=11
+    Nbeta=13
     data= np.loadtxt(file, skiprows=0, max_rows=Nw*Nbeta*(Ne+1))
     freq = data[:, 0]     
     if type :    
@@ -57,19 +57,20 @@ def Ratio_E(file, type, Nw, Ne) :
         Ratio_tot[i]=norm_ev/norm_tot
     return w, Ratio, Ratio_tot
 
-def plot_Ratio(file, nom, titre, Ne) : 
-    data = np.loadtxt(file, delimiter=None, skiprows=1) 
-
-    w = data[:, 0]
-    # 1 abs Ratio / progressive, 2 abs Ratio / tot
-    # 3 phase Ratio / progressive, 4 phase Ratio / tot
-    p_abs_tot=data[:,2]
+def plot_Ratio(id, nom, titre, Ne) : 
     plt.figure(figsize=(8, 6))
-    plt.plot(w, p_abs_tot, marker='o', linestyle='-')
+    for i, L in enumerate(Ne):
+        file=f"Ratio_E{L}_{id}.dat"
+        data = np.loadtxt(file, delimiter=None, skiprows=1) 
+        w = data[:, 0]
+        # 1 abs Ratio / progressive, 2 abs Ratio / tot
+        # 3 phase Ratio / progressive, 4 phase Ratio / tot
+        p_abs_tot=data[:,2]
+        plt.plot(w, p_abs_tot, marker='o', linestyle='-', label=f"L={L}")
     plt.xlabel("frequencies (rad/s)")
     plt.ylabel(f"Ratio")
     plt.title(f"Norm ratio of {nom} for Ne={Ne} \n ({titre})")
-    # plt.legend()
+    plt.legend()
     plt.grid()
     plt.savefig(f"Ratio_E{Ne}_{nom}.png")
     plt.close()  # Ferme la figure pour éviter trop d'ouvertures
@@ -100,7 +101,7 @@ Nw=20
 Ne=6
 type=f"E{Ne}"
 titre=f"Cylinder - Nw={Nw}, Nbeta=11, dof=6, Ndir=1"
-PIT= f"{chemin}PIT3_Cylinder_dof6/results/OneBodyProblem_{type}"
+PIT= f"{chemin}PIT3_barge/results/OneBodyProblem_{type}"
 
 matrix_D_abs=f"{PIT}_DiffractionMatrix_abs.dat"
 matrix_D_ph=f"{PIT}_DiffractionMatrix_ph.dat"
@@ -146,10 +147,11 @@ if Calcul_Ratio :
             f.write(f"{w[i]:.4f}    {Ratio[i]:16.8f}        {Ratio_tot[i]:16.8f}           {Ratio_ph[i]:16.8f}        {Ratio_tot_ph[i]:16.8f} ")  
             f.write("\n") 
     if PLOT :
-        plot_Ratio(fileD, "matrix_D", titre, Ne)
-        plot_Ratio(fileG, "matrix_G", titre, Ne)
-        plot_Ratio(fileAR, "coefs_AR", titre, Ne)
-        plot_Ratio(fileAS, "coefs_AS", titre, Ne)
+        Ne=[1, 6]
+        plot_Ratio("D", "matrix_D", titre, Ne)
+        plot_Ratio("G", "matrix_G", titre, Ne)
+        plot_Ratio("AR", "coefs_AR", titre, Ne)
+        plot_Ratio("AS", "coefs_AS", titre, Ne)
 
 if Error :                
     print("Calcul Relative Error")

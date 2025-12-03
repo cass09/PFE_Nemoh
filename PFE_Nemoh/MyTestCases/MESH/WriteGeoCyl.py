@@ -122,4 +122,4 @@ def write_nemoh_cylinder_mesh(GEO, radius, height, n_axial=4, n_circ=8, n_radial
     print(f"✅ Fichier '{filename}' créé avec {n_nodes} nœuds et {n_elements} éléments.")
 
 # 🔧 Exemple d'utilisation avec lid :
-write_nemoh_cylinder_mesh(GEO=False, radius=3, height=3, n_axial=14, n_circ=38, n_radial=10, nom="MNcyl", SYM=True, lid=False)
+write_nemoh_cylinder_mesh(GEO=False, radius=3, height=6, n_axial=24, n_circ=66, n_radial=9, nom="Cyl", SYM=False, lid=False)

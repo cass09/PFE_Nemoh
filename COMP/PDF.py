@@ -3,11 +3,11 @@ from matplotlib.backends.backend_pdf import PdfPages
 from PIL import Image
 import os
 
-nom_pdf = "ConvergenceMesh_barge_Nb1.pdf"
-dossier_graphes = "./Mesh"
+nom_pdf = "ForceTransfersMatrix_DOF1.pdf"
+dossier_graphes = "./OneBodyProblem/ForceTransfersMatrix/DOF1"
 fichiers_graphes = sorted([
     f for f in os.listdir(dossier_graphes)
-    if f.startswith("N_") and f.endswith(".png")
+    if f.startswith("") and f.endswith(".png")
 ])
 
 with PdfPages(nom_pdf) as pdf:
